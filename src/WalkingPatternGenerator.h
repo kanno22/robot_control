@@ -8,6 +8,8 @@
 
 #include<iostream>
 
+#define ZC 0.33//0.4//0.45
+
 using namespace Eigen;
 
 class walkingpatterngenerator

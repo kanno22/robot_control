@@ -28,8 +28,13 @@ set ylabel "z [m]"
 
 plot file using 5:7 title "R_z" w l lw 2,file using 8:10 title "L_z" w l lw 2
 
+set output "./fig/COG_v.png"
+set autoscale x
+set autoscale y
+set xlabel "Time [sec]"
+set ylabel "velocity [m/s]"
 
-# set output "./fig/test.png"
+plot file using 11 title "COG_Vx" w l lw 2, file using 12 title "COG_Vy" w l lw 2# set output "./fig/test.png"
 # set autoscale x
 # set autoscale y
 # set y2tics

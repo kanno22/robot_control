@@ -13,7 +13,7 @@ using namespace std;
         Rrefr<< 1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0;
         Rrefl<< 1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0;
 
-        zc=0.4;       //[m]
+        zc=ZC;       //[m]
         g=9.81;        //[m/s^2]
         Tc=sqrt(zc/g);
         C=0.0;       
@@ -36,7 +36,7 @@ using namespace std;
 
         Rx=0.0;
         Ry=0.0;
-        Rz=0.02;//4cm足を上げる
+        Rz=0.03;//4cm足を上げる
         w=0.0;
     };
 
@@ -151,6 +151,10 @@ using namespace std;
         link[0].p(0)=Cpref(0);
         link[0].p(1)=Cpref(1);
         link[0].p(2)=zc;
+
+        link[0].v(0)=Cvref(0);
+        link[0].v(1)=Cvref(1);
+        link[0].v(2)=0.0;
         //遊脚軌道生成
         if(sign(stepcount)==1)//右足が支持脚
         {
@@ -161,13 +165,18 @@ using namespace std;
             prefr(2)=0.0;
 
             if(stepcount==0)
-            {
-                Rx=(wp[stepcount+1].P(0)-Prefl(0))/(2*M_PI);
-                Ry=(wp[stepcount+1].P(1)-Prefl(1))/(2*M_PI);
+            {   
+                // Rx=(wp[stepcount+1].P(0)-Prefl(0))/(2*M_PI);
+                // Ry=(wp[stepcount+1].P(1)-Prefl(1))/(2*M_PI);
 
-                prefl(0)=Prefl(0)+Rx*(w*t-sin(w*t));//遊脚脚
-                prefl(1)=Prefl(1)+Ry*(w*t-sin(w*t));
-                prefl(2)=Rz*(1-cos(w*t));
+                // prefl(0)=Prefl(0)+Rx*(w*t-sin(w*t));//遊脚脚
+                // prefl(1)=Prefl(1)+Ry*(w*t-sin(w*t));
+                // prefl(2)=Rz*(1-cos(w*t));
+                
+                prefl(0)=wp[stepcount+1].P(0);//あらかじめ着地しておく
+                prefl(1)=wp[stepcount+1].P(1);
+                prefl(2)=0.0;
+
             }
             else
             {

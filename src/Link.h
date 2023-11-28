@@ -13,6 +13,7 @@ class RobotLink
         int parentID;  //親リンクのID
         
         Vector3d p;     //絶対位置
+        Vector3d v;     //絶対速度
         Matrix3d R;     //絶対姿勢
         Vector3d a;     //関節軸ベクトル
         Vector3d b;     //相対位置ベクトル

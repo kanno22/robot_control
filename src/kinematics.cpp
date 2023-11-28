@@ -88,19 +88,15 @@ void Kinematics::InverseKinematics(RobotLink link[], Vector3d pref, Matrix3d Rre
         {
             cout<<"終わり"<<endl;
         } 
-        
+      
         //Step6:誤差が大きいなら位置・姿勢の誤差を小さくするような関節角度修正量Δqをニュートンラプソン法により算出
         J = Jacobian(link, tofrom, start);  //ヤコビ行列の算出
-
         A = J.transpose() * J;
-        
         pinvJ = A.inverse() * J.transpose();  //ヤコビ行列の疑似逆行列を計算
-
         dq = pinvJ * dr;
-
         //Step7:qi+1を算出
         q = q + k * dq;
-
+        
         for (int i = 0; i < tofrom; i++)
         {
             link[i + start].q = q(i);

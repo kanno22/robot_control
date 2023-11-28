@@ -7,7 +7,7 @@
 #include <unistd.h>
 #include <fcntl.h>//open,
 
-#define SERIAL_PORT "/dev/ttyS2"
+#define SERIAL_PORT "/dev/ttyS16"
 
 class serial
 {
