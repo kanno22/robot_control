@@ -30,6 +30,7 @@ struct itimerval timer, old_timer;
 
 #define START 0.03//0.05//0.0004 0.0025 0.8 
 #define TIMER
+#define TEST
 #define INITTIME 1000000//10000000
 
 using namespace Eigen;
@@ -80,7 +81,7 @@ int main()
     datalog.log_init();
     //////////////////////////////////
     
-    Arduino.s_open();
+    Arduino.s_open(serial::kB115200);
     RS_serial.rs_open();
 
     for(int i=0;i<10;i++)
@@ -89,7 +90,16 @@ int main()
         RS_serial.rs_torque(RS405CB[i]);
         cout<<"torque on"<<endl;
     }
+    link_q[4][0]=0.04;
+    link_q[11][0]=0.04;
+    ECmotorInput(link_q,Arduino,0);
+    usleep(2*INITTIME );
+    link_q[4][0]=0.0;
+    link_q[11][0]=0.0;
+    ECmotorInput(link_q,Arduino,0);
+    usleep(INITTIME );
 
+ #ifdef TEST
        //////////////////////////////////
     LINK[0].p={0.0,0.055,ZC};//{0.0,0.02,0.385};
     LINK[0].R<< 1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0;
@@ -101,12 +111,6 @@ int main()
 
     kine.InverseKinematics(LINK,linkref[0].p,linkref[0].R,tofrom,LINK[1].ID);
     kine.InverseKinematics(LINK,linkref[1].p,linkref[1].R,tofrom,LINK[8].ID);
-
-    cout<<"pr="<<LINK[6].p<<endl;
-    cout<<"Rr="<<LINK[6].R<<endl;
-    
-    cout<<"pl="<<LINK[13].p<<endl;
-    cout<<"Rl="<<LINK[13].R<<endl;
     
     w_count=0;
     for(int j=0;j<15;j++)
@@ -174,7 +178,7 @@ int main()
     cout<<"歩行開始"<<endl;
 
 
-#ifdef TIMER
+    #ifdef TIMER
     timer_init();
     while(remaining>0)
     {
@@ -207,6 +211,8 @@ int main()
         cout<<"initial posture"<<endl;
     }
     usleep( 1000000 );
+#endif
+
     for(int i=0;i<10;i++)
     {
         RS405CB[i].tq_mode=0;
@@ -214,26 +220,10 @@ int main()
         cout<<"torque off"<<endl;
     }
 
-
     RS_serial.rs_close();
     Arduino.s_close();
     
-
    //////////////////////////////////
-    cout<<"wp1.pref=\n"<<wp[1].Pref <<endl;
-    cout<<"wp1.p=\n"<<wp[1].P <<endl;
-    cout<<"wp2.pref=\n"<<wp[2].Pref <<endl;
-    cout<<"wp2.p=\n"<<wp[2].P <<endl;
-    cout<<"wp3.pref=\n"<<wp[3].Pref <<endl;
-    cout<<"wp3.p=\n"<<wp[3].P <<endl;
-    cout<<"wp4.pref=\n"<<wp[4].Pref <<endl;
-    cout<<"wp4.p=\n"<<wp[4].P <<endl;
-    cout<<"wp5.pref=\n"<<wp[5].Pref <<endl;
-    cout<<"wp5.p=\n"<<wp[5].P <<endl;
-    cout<<"wp6.pref=\n"<<wp[6].Pref <<endl;
-    cout<<"wp6.p=\n"<<wp[6].P <<endl;
-    cout<<"wp7.pref=\n"<<wp[7].Pref <<endl;
-    cout<<"wp7.p=\n"<<wp[7].P <<endl;
 
     return 0;
 }
@@ -535,33 +525,33 @@ void ServoInput(double (&link_q)[15][NR_TIMER_INTERRUPTS],Servo_data RS405CB[],S
     } 
 }
 
+
 void ECmotorInput(double (&link_q)[15][NR_TIMER_INTERRUPTS],serial& Arduino,int w_count)
 {
-    int Angle;
+    string Angle_str;
 
-    //Angle=LINK[4].q*10000;//4 10
-    Angle=link_q[4][w_count]*10000;
-
-    Arduino.buf_w='R';//ヘッダ
-    Arduino.s_write();
-    Arduino.buf_w=Angle>>8;//上位バイト
-    Arduino.s_write();
-    Arduino.buf_w=Angle&0x00FF;//下位バイト
-    Arduino.s_write();    
-    Arduino.s_read();
+    Angle_str=to_string(link_q[4][w_count]);
+    if (Arduino.s_write(Angle_str)) 
+    {
+      cout << "Send : " << Angle_str << endl;
+    } 
+    else 
+    {
+      cout << "Send Error"  << endl;
+    }    
     //////////////////////
- //  Angle=LINK[10].q*10000;//100;//Link[10].q*10000;//4 10
-   Angle=link_q[11][w_count]*10000;
-    Arduino.buf_w='L';//ヘッダ
-    Arduino.s_write();
-    Arduino.buf_w=Angle>>8;//上位バイト
-    Arduino.s_write();
-    Arduino.buf_w=Angle&0x00FF;//下位バイト
-    //cout<<((Angle>>8)|(Angle&0x00FF))<<endl;
-    Arduino.s_write();  
-    Arduino.s_read();  
+    Angle_str=to_string(link_q[11][w_count]);
+    if (Arduino.s_write(Angle_str)) 
+    {
+      cout << "Send : " << Angle_str << endl;
+    } 
+    else 
+    {
+      cout << "Send Error"  << endl;
+    }
 
 }
+
 
 void timer_handler(int signam)
 {

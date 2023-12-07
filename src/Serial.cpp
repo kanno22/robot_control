@@ -2,58 +2,102 @@
 
 using namespace std;
 
-int serial::s_open()
+const int serial::kError = -1;
+
+serial::serial() 
 {
-    fd = open(SERIAL_PORT,O_RDWR);//デバイスファイルを開く O_RDWR 読み書き可能
-    if(fd<0)
-    {
-        cout<<"open error\n"<<endl;
-        return -1;
-    }
-    else
-    {
-        cout<<"Serial connected\n"<<endl;
-    }
-
-    tio.c_cflag += CREAD;               // 受信有効
-    tio.c_cflag += CLOCAL;              // ローカルライン（モデム制御なし）
-    tio.c_cflag += CS8;                 // データビット:8bit
-    tio.c_cflag += 0;                   // ストップビット:1bit
-    tio.c_cflag += 0;                   // パリティ:None
-
-    cfsetispeed( &tio, baudRate );
-    cfsetospeed( &tio, baudRate );
-    cfmakeraw(&tio);                    // RAWモード
-    tcsetattr( fd, TCSANOW, &tio );     // デバイスに設定を行う
-    ioctl(fd, TCSETA, &tio);            // ポートの設定を有効にする
-
-    return 0;
+  fd=kError;
 }
 
-void serial::s_read()
+serial::~serial() 
 {
-    int len = read(fd, buf, sizeof(buf));//len 受信したバイト数
-
-    if (0 < len)
-    {
-        for(int i = 0; i < len; i++) 
-        {
-            std::cout << buf[i];         
-        }
-    }
+  if (fd != kError) {
+    tcsetattr(fd, TCSANOW, &old_settings_);
+    close(fd);
+  }
 }
 
-int serial::s_write()
+bool serial::s_open(const BaudRate &rate) 
 {
-    int len = write(fd,&buf_w,1);
+  fd = open(SERIAL_PORT, O_RDWR | O_NOCTTY | O_NDELAY);
+  if (fd == kError) {
+    cout << "Device open error. device : \"" << SERIAL_PORT << "\""<< endl;
+    return false;
+  }
 
-    if(len<0)
+  if (tcgetattr(fd, &old_settings_) == kError) 
+  {
+    cout << "tcgetattr error."<< endl;
+    close(fd);
+    return false;
+  }
+
+  current_settings_ = old_settings_;
+
+  if ((cfsetispeed(&current_settings_, rate) == kError) || (cfsetospeed(&current_settings_, rate) == kError)) 
+  {
+    cout << "cfsetispeed or cfsetospeed error."<< endl;
+    close(fd);
+    return false;
+  }
+
+  current_settings_.c_iflag = IGNPAR;
+  current_settings_.c_oflag = 0;
+  current_settings_.c_lflag = 0;
+  current_settings_.c_cflag= (CS8 | CLOCAL | CREAD);
+
+  if (tcsetattr(fd, TCSANOW, &current_settings_) == kError) 
+  {
+    cout << "tcsetattr error."<< endl;
+    close(fd);
+    return false;
+  }
+
+  return true;
+}
+
+bool serial::s_write(const string &str) 
+{
+  size_t send_size = str.size() + 1;
+  cout<<"send_size="<<str.size()<<endl;
+
+  char send_char[send_size];
+
+  str.copy(send_char, str.size());
+
+  send_char[str.size()] = '\0';
+
+  return write(fd, send_char, send_size) == send_size;
+}
+
+string serial::s_read(const bool wait, const char terminate) 
+{
+  string receive_str;
+  bool receving = false;
+  char receive_char;
+
+  while (true) 
+  {
+    int read_size = read(fd, &receive_char, 1);
+
+    if (read_size > 0) 
     {
-      //  cout<<"write error"<<endl;
-        return -1;
+      receving = true;
+      receive_str.append(1, receive_char);
+      if (receive_char == terminate) 
+      {
+        break;
+      }
+    } 
+    else 
+    {
+      if (!wait || receving) 
+      {
+        break;
+      }
     }
-
-    return 0;
+  }
+  return receive_str;
 }
 
 void serial::s_close()

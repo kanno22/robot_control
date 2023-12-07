@@ -1,27 +1,42 @@
 #ifndef Serial
 #define Serial
 
-#include<iostream>
-#include <sys/ioctl.h>
-#include <termios.h>//cfsetispeed,
+#include <fcntl.h>
+#include <iostream>
+#include <string>
+#include <stdio.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <termios.h>
 #include <unistd.h>
-#include <fcntl.h>//open,
 
 #define SERIAL_PORT "/dev/ttyACM0"
+
+using namespace std;
 
 class serial
 {
     private:
-        int fd;//ファイルディスクリプタ(ファイルの識別番号,失敗-1)
-        unsigned char buf[255];//バッファ（一時的な記憶領域)
-        struct termios tio;//シリアル通信設定
-        int baudRate = B115200;;//一秒あたりのデータ数
+        static const int kError;
+        termios old_settings_;
+        termios current_settings_;
+        int fd;
 
     public:
-        int buf_w;//送信時のバッファ
-        int s_open();
-        void s_read();
-        int s_write();
+        enum BaudRate 
+        {
+            kB4800 = B4800,
+            kB9600 = B9600,
+            kB19200 = B19200,
+            kB38400 = B38400,
+            kB115200 = B115200           
+        };
+
+        serial();
+        virtual ~serial();
+        bool s_open(const BaudRate &baudrate);
+        bool s_write(const string &str);
+        string s_read(const bool wait=true, const char terminate='\0');
         void s_close();
 };
 
