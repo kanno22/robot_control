@@ -61,6 +61,10 @@ void setup()
   attachInterrupt(Rinterrupt, REncode, CHANGE);
   attachInterrupt(Linterrupt, LEncode, CHANGE);
 
+////////////////
+  pinMode(7,OUTPUT);
+////////////////
+
 }
 
 void loop() 
@@ -73,7 +77,8 @@ void loop()
   { 
     Input();
    // serial_write();
-    Receive=false;      
+    Receive=false;
+         
   }
   
 }

@@ -18,6 +18,7 @@ class Inputgenerator
     double Time;
     double Oldtime;//add
     double dt;
+    int ReceiveCount=1;
 
     Inputgenerator();
     void Forcegene(bool Start,bool Estart);//

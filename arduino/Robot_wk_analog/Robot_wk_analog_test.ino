@@ -37,6 +37,7 @@ bool Estart;
 bool Receive=false;
 
 
+
 const float ulimit=127.5;//255/2
 
 IMU imu;
@@ -53,6 +54,10 @@ void setup()
   attachInterrupt(Rinterrupt, REncode, CHANGE);
   attachInterrupt(Linterrupt, LEncode, CHANGE);
   Enable_Input(HIGH,LOW,LOW);
+
+  ////////////////
+  pinMode(7,OUTPUT);
+////////////////
 }
 
 void loop() 
@@ -61,12 +66,14 @@ void loop()
   CallDisp();//右、左足のストロークの算出
   serial_read();
   
-  if(Receive==true)
-  { 
-    Input();
-   // serial_write();
-    Receive=false;      
-  }
+//  if(Receive==true)
+//  { 
+//    ReceiveCount++; 
+//    Input();
+//   // serial_write();
+//    Receive=false;      
+//  }
+  Input();
   
 }
 
@@ -97,18 +104,32 @@ void Input()//BLDCへの指令値印加
 //  Rleg_input=(int)(127.5+limit(538.206*GEAR_RADIUS*inputgenerator.Rforce_ref));//a=1/Kt(2.568/51)
 //  Lleg_input=(int)(127.5+limit(538.206*GEAR_RADIUS*inputgenerator.Lforce_ref));
 
+  inputgenerator.dispgene();
   
-  Rleg_input=(int)(127.5+limit((51/19.2)*(24/PI)*(Rleg_disp/GEAR_RADIUS)));//1qc=7.5degLleg_disp/80
+  Rleg_input=(int)(127.5+limit((51/19.2)*(24/PI)*(inputgenerator.Rdisp_ref/GEAR_RADIUS)));//1qc=7.5degLleg_disp/80
   Lleg_input=(int)(127.5+limit((51/19.2)*(24/PI)*(Lleg_disp/GEAR_RADIUS)));//1qc=7.5degLleg_disp/80
 //
 //inputgenerator.dispgene();
 //  Rleg_input=(int)(127.5+limit((51/19.2)*(24/PI)*(inputgenerator.Rdisp_ref*10000/80)));//1qc=7.5degLleg_disp/80
 //  Lleg_input=(int)(127.5+limit((51/19.2)*(24/PI)*(inputgenerator.Ldisp_ref/80)));//1qc=7.5degLleg_disp/80
 
+  /////////
+  if((inputgenerator.ReceiveCount%2)!=0)
+  {
+    digitalWrite(7,HIGH);
+    
+  }
+  else
+  {
+    digitalWrite(7,LOW);
+  }
+  ////////
+
   analogWrite(RLEG_PIN,Rleg_input);
   analogWrite(LLEG_PIN,Lleg_input);
 
   inputgenerator.Counter();
+  delay(10);
 
 }
 

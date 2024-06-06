@@ -28,22 +28,29 @@ void Inputgenerator::dispgene()
     Rdisp_ref=0.0;
     Ldisp_ref=0.0;
     starttime=Time;
+    ReceiveCount=2;
   }
   else if(Time>=starttime&&Time<=(starttime+4))
   {
-    Rdisp_ref=0.05*(Time-starttime);//トルク[Nm]
-    Ldisp_ref=0.05*(Time-starttime);//トルク[Nm]
+//    Rdisp_ref=0.05*(Time-starttime);//トルク[Nm]
+//    Ldisp_ref=0.05*(Time-starttime);//トルク[Nm]
 
+      Rdisp_ref=0.01;
+    Ldisp_ref=0.01;
+    ReceiveCount=3;
   }
   else if(Time>=(starttime+4)&&Time<=(starttime+8))  {
-    Rdisp_ref=-0.05*(Time-starttime)+0.2;//トルク[Nm]
-    Ldisp_ref=-0.05*(Time-starttime)+0.2;//トルク[Nm]
-    
+//    Rdisp_ref=-0.05*(Time-starttime)+0.2;//トルク[Nm]
+//    Ldisp_ref=-0.05*(Time-starttime)+0.2;//トルク[Nm]
+      Rdisp_ref=0.0;
+     Ldisp_ref=0.0;
+     ReceiveCount=4;   
   }
   else
   {
-    Rdisp_ref=0.0;//-18
-    Ldisp_ref=0.0;
+    Rdisp_ref=0.01;//-18
+    Ldisp_ref=0.01;
+    ReceiveCount=5;
   }
 }
 
