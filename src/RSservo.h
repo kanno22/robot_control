@@ -8,7 +8,7 @@
 #include <unistd.h> //read write
 #include <fcntl.h> // O_RDWR|O_NOCTTY|O_NONBLOCK)
 
-#define SERVO_PORT	"/dev/ttyUSB0"	// 通信ポートの指定
+#define SERVO_PORT	"/dev/ttyUSB1"	// 通信ポートの指定
 
 class Servo_data
 {

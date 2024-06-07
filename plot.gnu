@@ -3,6 +3,7 @@ set datafile separator "\t ,"
 set grid#グリッド線　描画
   
 file="./log/log.csv"
+file2="./log/log2.csv"
 
 set output "./fig/test.png"
 set autoscale x
@@ -41,3 +42,11 @@ plot file using 11 title "COG_Vx" w l lw 2, file using 12 title "COG_Vy" w l lw 
 # set y2label "Vref [V]"
 # set y2range [-4:4]
 # p [][] file u 1:($2) title "between BOGIE-link and MOTOR-link" w l lw 2, file u 1:($2-$3) title "between ROCKER-link and BOGIE-link" w l lw 2, file u 1:($6-127.5)/48.8 axis x1y2 title "Vref" w l lw 2
+
+set output "./fig/linear.png"
+set autoscale x
+set autoscale y
+set xlabel "Time [sec]"
+set ylabel "length [m]"
+
+plot file2 using 2 title "Rleg_l" w l lw 2, file2 using 3 title "Lleg_l" w l lw 2

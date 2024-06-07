@@ -1,10 +1,9 @@
 
-// #include<iostream>
-//#include "Link.h"
 #include "Kinematics.h"
 #include "WalkingPatternGenerator.h"
 #include "Serial.h"
 #include "RSservo.h"
+#include "dynamixel.h"
 #include"Log.h"
 
 /// timer
@@ -31,17 +30,22 @@ struct itimerval timer, old_timer;
 #define START 0.03//0.05//0.0004 0.0025 0.8 
 #define TIMER
 #define TEST
-#define INITTIME 1000000//10000000
+#define INITTIME 1000000//1s
+
+///
+#define RSNUM 2
 
 using namespace Eigen;
 using namespace std;
 
 void LinkInit(RobotLink LINK[], int linknum);
-void ServoInit(Servo_data RS405CB[]);
+void RSInit(Servo_data RS405CB[]);
 void WPInit(walkingparameters wp[]);
-void ServoInput_init(double (&link_q)[15][NR_TIMER_INTERRUPTS],Servo_data RS405CB[],Servo_serial& RS_serial,int w_count);
-void ServoInput(double (&link_q)[15][NR_TIMER_INTERRUPTS],Servo_data RS405CB[],Servo_serial& RS_serial,int w_count);
+void RSInput_init(double (&link_q)[15][NR_TIMER_INTERRUPTS],Servo_data RS405CB[],Servo_serial& RS_serial);
+void RSInput(double (&link_q)[15][NR_TIMER_INTERRUPTS],Servo_data RS405CB[],Servo_serial& RS_serial,int w_count);
 void ECmotorInput(double (&link_q)[15][NR_TIMER_INTERRUPTS],serial& Arduino,int w_count);
+void XMInput_init(double (&link_q)[15][NR_TIMER_INTERRUPTS]);
+void XMInput(double (&link_q)[15][NR_TIMER_INTERRUPTS],int w_count);
 
 void timer_init();
 void timer_close();
@@ -57,8 +61,9 @@ void timer_handler(int signam);//タイマに呼び出される関数
     walkingpatterngenerator gene;
 
     serial Arduino;
-    Servo_data RS405CB[10];
+    Servo_data RS405CB[RSNUM];
     Servo_serial RS_serial;
+    Dynamixel XM_serial;
 
     DataLog datalog;
 
@@ -77,29 +82,62 @@ void timer_handler(int signam);//タイマに呼び出される関数
 int main()
 {
     LinkInit(LINK,linknum);
-    ServoInit(RS405CB);
+    RSInit(RS405CB);
+
     datalog.log_init();
+    datalog.log2_init();
     //////////////////////////////////
     
     Arduino.s_open(serial::kB115200);
     RS_serial.rs_open();
+    XM_serial.open();
 
-    for(int i=0;i<10;i++)
+    for(int i=0;i<RSNUM;i++)
     {
         RS405CB[i].tq_mode=1;
         RS_serial.rs_torque(RS405CB[i]);
-        cout<<"torque on"<<endl;
+        cout<<"RS_torque on"<<endl;
     }
+
+    XM_serial.set_OperatingModes();
+    XM_serial.set_LEDs(true);
+    XM_serial.torque_enables(true);
+    cout<<"XM_torque on"<<endl;
+
+#ifndef TEST
     link_q[4][0]=0.04;
-    link_q[11][0]=0.04;
+    link_q[11][0]=-0.04;
+    link_q[1][0]=100*(M_PI/1800);
+    link_q[7][0]=-100*(M_PI/1800);
+    link_q[2][0]=10*(M_PI/180);//右股ロール
+    link_q[3][0]=10*(M_PI/180);//右股ピッチ
+    link_q[5][0]=10*(M_PI/180);//右足首ピッチ
+    link_q[6][0]=10*(M_PI/180);//右足首ロール
+    link_q[9][0]=10*(M_PI/180);//左股ロール
+    link_q[10][0]=10*(M_PI/180);//左股ピッチ
+    link_q[12][0]=10*(M_PI/180);//右足首ピッチ
+    link_q[13][0]=10*(M_PI/180);//右足首ロール
     ECmotorInput(link_q,Arduino,0);
-    usleep(2*INITTIME );
+    RSInput_init(link_q,RS405CB,RS_serial);
+    XMInput_init(link_q);
+    usleep(INITTIME );
     link_q[4][0]=0.0;
     link_q[11][0]=0.0;
+    link_q[1][0]=0*(M_PI/1800);
+    link_q[7][0]=0*(M_PI/1800);
+    link_q[2][0]=0*(M_PI/180);//右股ロール
+    link_q[3][0]=0*(M_PI/180);//右股ピッチ
+    link_q[5][0]=0*(M_PI/180);//右足首ピッチ
+    link_q[6][0]=0*(M_PI/180);//右足首ロール
+    link_q[9][0]=0*(M_PI/180);//左股ロール
+    link_q[10][0]=0*(M_PI/180);//左股ピッチ
+    link_q[12][0]=0*(M_PI/180);//右足首ピッチ
+    link_q[13][0]=0*(M_PI/180);//右足首ロール
     ECmotorInput(link_q,Arduino,0);
+    RSInput_init(link_q,RS405CB,RS_serial);
+    XMInput_init(link_q);
     usleep(INITTIME );
-
- #ifdef TEST
+#else
        //////////////////////////////////
     LINK[0].p={0.0,0.055,ZC};//{0.0,0.02,0.385};
     LINK[0].R<< 1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0;
@@ -112,15 +150,15 @@ int main()
     kine.InverseKinematics(LINK,linkref[0].p,linkref[0].R,tofrom,LINK[1].ID);
     kine.InverseKinematics(LINK,linkref[1].p,linkref[1].R,tofrom,LINK[8].ID);
     
-    w_count=0;
     for(int j=0;j<15;j++)
     {
         link_q[j][w_count]=LINK[j].q;
     } 
     w_count=0;//初期姿勢
     cout<<"直立姿勢"<<endl;  
-    ServoInput_init(link_q,RS405CB,RS_serial,w_count);
+    RSInput_init(link_q,RS405CB,RS_serial);
     ECmotorInput(link_q,Arduino,w_count);
+    XMInput_init(link_q);
     usleep( INITTIME );
     //////////////////////////////////
       
@@ -131,9 +169,6 @@ int main()
         kine.InverseKinematics(LINK,linkref[0].p,linkref[0].R,tofrom,LINK[1].ID);
         kine.InverseKinematics(LINK,linkref[1].p,linkref[1].R,tofrom,LINK[8].ID);
 
-        // kine.ForwardKinematics(LINK,7,LINK[1].ID);
-        // kine.ForwardKinematics(LINK,7,LINK[8].ID);
-      //  datalog.logging(LINK,gene);
         gene.t=gene.t+0.02;
         for(int j=0;j<15;j++)
         {
@@ -145,15 +180,14 @@ int main()
     cout<<"初期姿勢へ以降"<<endl;  
     for(int i=0;i<100;i++)
     {   
-        ServoInput(link_q,RS405CB,RS_serial,w_count);
+        RSInput(link_q,RS405CB,RS_serial,w_count);
         ECmotorInput(link_q,Arduino,w_count);
+        XMInput(link_q,w_count);
         
         w_count++;    
         usleep( 20000 );//10000000　
     }  
     //////////////////////////////////
-
-   //datalog.log_init(); 
     WPInit(wp);
 
     for(int i=0;i<NR_TIMER_INTERRUPTS;i++)
@@ -163,6 +197,7 @@ int main()
         kine.InverseKinematics(LINK,linkref[1].p,linkref[1].R,tofrom,LINK[8].ID);
 
         datalog.logging(LINK,gene);
+        datalog.logging_2(LINK,gene);
         for(int j=0;j<15;j++)
         {
             link_q[j][i]=LINK[j].q;
@@ -171,13 +206,12 @@ int main()
 
     w_count=0;//初期姿勢
     cout<<"0歩目遊脚移動"<<endl;  
-    ServoInput_init(link_q,RS405CB,RS_serial,w_count);
+    RSInput_init(link_q,RS405CB,RS_serial);
     ECmotorInput(link_q,Arduino,w_count);
+    XMInput_init(link_q);
     usleep( INITTIME );
 
     cout<<"歩行開始"<<endl;
-
-
     #ifdef TIMER
     timer_init();
     while(remaining>0)
@@ -188,38 +222,19 @@ int main()
     //////////////////////////////////
     timer_close();
     #endif
-    for(int i=0;i<10;i++)
-    {
-        if(i==1)
-        {
-            RS405CB[i].Angle_ref=-50;    
-        }
-        else if(i==5)
-        {
-            RS405CB[i].Angle_ref=100;            
-        }
-        else if((i==8)||(i==9))
-        {
-            RS405CB[i].Angle_ref=-50;            
-        }
-        else
-        {
-            RS405CB[i].Angle_ref=000;
-        }
-        RS405CB[i].dt_ref=100;
-        RS_serial.rs_move(RS405CB[i]);
-        cout<<"initial posture"<<endl;
-    }
-    usleep( 1000000 );
+
 #endif
 
-    for(int i=0;i<10;i++)
+    for(int i=0;i<RSNUM;i++)
     {
         RS405CB[i].tq_mode=0;
         RS_serial.rs_torque(RS405CB[i]);
         cout<<"torque off"<<endl;
     }
+    XM_serial.torque_enables(false);
+    XM_serial.set_LEDs(false);
 
+    XM_serial.close();
     RS_serial.rs_close();
     Arduino.s_close();
     
@@ -298,14 +313,6 @@ void LinkInit(RobotLink LINK[], int linknum)
     LINK[14].a = {0.0, 0.0, 0.0};
     LINK[14].b = {0.0, 0.0, -0.0275};
 
-}
-
-void ServoInit(Servo_data RS405CB[])
-{
-    for(int i=0;i<10;i++)
-    {
-        RS405CB[i].ID=i+1;
-    }
 }
 
 void WPInit(walkingparameters wp[])
@@ -388,141 +395,38 @@ void WPInit(walkingparameters wp[])
 
 }
 
-void ServoInput_init(double (&link_q)[15][NR_TIMER_INTERRUPTS],Servo_data RS405CB[],Servo_serial& RS_serial,int w_count)
+//actuate
+void RSInit(Servo_data RS405CB[])
 {
-    cout<<"実行"<<endl;
-    for(int i=0;i<10;i++)//サーボの数だけ
-    {   
-        if(i<3)
-        {
-            if(i==1)//ID2右ロール
-            {
-                RS405CB[i].Angle_ref=-50+link_q[i+1][w_count]*(1800/M_PI);    
-                cout<<"サーボID"<<i+1<<"θ="<<link_q[i+1][w_count]*(1800/M_PI)<<endl;            
-            }
-            else
-            {
-                RS405CB[i].Angle_ref=link_q[i+1][w_count]*(1800/M_PI);
-                cout<<"サーボID"<<i+1<<"θ="<<link_q[i+1][w_count]*(1800/M_PI)<<endl;
-            }
-           
-        }
-        else if((i>=3)&&(i<5))
-        {
-            if(i==4)
-            {
-                RS405CB[i].Angle_ref=-link_q[i+2][w_count]*(1800/M_PI);//CCW
-                cout<<"サーボID"<<i+1<<"θ="<<-link_q[i+2][w_count]*(1800/M_PI)<<endl;
-            }
-            else
-            {
-                RS405CB[i].Angle_ref=link_q[i+2][w_count]*(1800/M_PI);
-                cout<<"サーボID"<<i+1<<"θ="<<link_q[i+2][w_count]*(1800/M_PI)<<endl;
-            }
-            
-        }
-        else if((i>=5)&&(i<8))
-        {
-            if(i==6)//ID7　左ロール
-            {
-                RS405CB[i].Angle_ref=-20+link_q[i+3][w_count]*(1800/M_PI);
-                cout<<"サーボID"<<i+1<<"θ="<<link_q[i+3][w_count]*(1800/M_PI)<<endl;
-            }
-            else if(i==7)//ID8　左ピッチ
-            {
-                 RS405CB[i].Angle_ref=-30-link_q[i+3][w_count]*(1800/M_PI);
-                 cout<<"サーボID"<<i+1<<"θ="<<link_q[i+3][w_count]*(1800/M_PI)<<endl;
-            }  
-            else
-            {
-                RS405CB[i].Angle_ref=link_q[i+3][w_count]*(1800/M_PI);
-                cout<<"サーボID"<<i+1<<"θ="<<link_q[i+3][w_count]*(1800/M_PI)<<endl;
-            }  
-        }
-        else
-        {
-            if(i==8)
-            {
-                RS405CB[i].Angle_ref=-50-link_q[i+4][w_count]*(1800/M_PI);
-                cout<<"サーボID"<<i+1<<"θ="<<-link_q[i+4][w_count]*(1800/M_PI)<<endl;
-            }
-            else
-            {
-                RS405CB[i].Angle_ref=-50-link_q[i+4][w_count]*(1800/M_PI);
-                cout<<"サーボID"<<i+1<<"θ="<<link_q[i+4][w_count]*(1800/M_PI)<<endl;
-            }
-        }
-       //cout<<"サーボID"<<i+1<<"θ="<<RS405CB[i].Angle_ref<<endl;
-        RS405CB[i].dt_ref=100;//1s
-
-        //送信
-        RS_serial.rs_move(RS405CB[i]);
-    } 
+    RS405CB[0].ID=1;//右足ヨー
+    RS405CB[1].ID=6;//左足ヨー
 }
 
-void ServoInput(double (&link_q)[15][NR_TIMER_INTERRUPTS],Servo_data RS405CB[],Servo_serial& RS_serial,int w_count)
+void RSInput_init(double (&link_q)[15][NR_TIMER_INTERRUPTS],Servo_data RS405CB[],Servo_serial& RS_serial)
 {
-    for(int i=0;i<10;i++)//サーボの数だけ
+    cout<<"RSInput_init"<<endl;
+
+    RS405CB[0].Angle_ref=link_q[1][0]*(1800/M_PI); 
+    RS405CB[1].Angle_ref=link_q[7][0]*(1800/M_PI); 
+    //送信
+    for(int i=0;i<RSNUM;i++)
     {
-        if(i<3)
-        {
-            if(i==1)//ID2右ロール
-            {
-                RS405CB[i].Angle_ref=-50+link_q[i+1][w_count]*(1800/M_PI);
-            }
-            else
-            {
-                RS405CB[i].Angle_ref=link_q[i+1][w_count]*(1800/M_PI);
-            }
-           
-        }
-        else if((i>=3)&&(i<5))
-        {
-            if(i==4)
-            {
-                RS405CB[i].Angle_ref=-link_q[i+2][w_count]*(1800/M_PI);//CCW
-            }
-            else
-            {
-                RS405CB[i].Angle_ref=link_q[i+2][w_count]*(1800/M_PI);
-            }
-            
-        }
-        else if((i>=5)&&(i<8))
-        {
-            if(i==6)//ID7　左ロール
-            {
-                RS405CB[i].Angle_ref=-20+link_q[i+3][w_count]*(1800/M_PI);
-    
-            }
-            else if(i==7)//ID8　左ピッチ
-            {
-                 RS405CB[i].Angle_ref=-30-link_q[i+3][w_count]*(1800/M_PI);
-                
-            }  
-            else
-            {
-                RS405CB[i].Angle_ref=link_q[i+3][w_count]*(1800/M_PI);
-            }  
-        }
-        else
-        {
-            if(i==8)
-            {
-                RS405CB[i].Angle_ref=-50-link_q[i+4][w_count]*(1800/M_PI);
-            }
-            else
-            {
-                RS405CB[i].Angle_ref=-50-link_q[i+4][w_count]*(1800/M_PI);
-            }
-             //   RS405CB[i].Angle_ref=-50-link_q[i+4][w_count]*(1800/M_PI);
-        }
-
-        RS405CB[i].dt_ref=1*2;//10ms
-
-        //送信
+        RS405CB[i].dt_ref=100;//1s
         RS_serial.rs_move(RS405CB[i]);
-    } 
+    }
+    
+}
+
+void RSInput(double (&link_q)[15][NR_TIMER_INTERRUPTS],Servo_data RS405CB[],Servo_serial& RS_serial,int w_count)
+{
+    RS405CB[0].Angle_ref=link_q[1][w_count]*(1800/M_PI); 
+    RS405CB[1].Angle_ref=link_q[7][w_count]*(1800/M_PI); 
+    //送信
+    for(int i=0;i<RSNUM;i++)
+    {
+        RS405CB[i].dt_ref=2;//2ms
+        RS_serial.rs_move(RS405CB[i]);
+    }
 }
 
 
@@ -552,7 +456,41 @@ void ECmotorInput(double (&link_q)[15][NR_TIMER_INTERRUPTS],serial& Arduino,int 
 
 }
 
+void XMInput_init(double (&link_q)[15][NR_TIMER_INTERRUPTS])
+{
+    cout<<"XMInput_init"<<endl;
 
+   XM_serial.angle[0]=-1*link_q[2][0]*(180/M_PI);//右股ロール
+   XM_serial.angle[1]=link_q[3][0]*(180/M_PI);//右股ピッチ
+   XM_serial.angle[2]=-1*link_q[5][0]*(180/M_PI);//右足首ピッチ
+   XM_serial.angle[3]=link_q[6][0]*(180/M_PI);//右足首ロール
+   XM_serial.angle[4]=-1*link_q[9][0]*(180/M_PI);//左股ロール
+   XM_serial.angle[5]=-1*link_q[10][0]*(180/M_PI);//左股ピッチ
+   XM_serial.angle[6]=link_q[12][0]*(180/M_PI);//右足首ピッチ
+   XM_serial.angle[7]=link_q[13][0]*(180/M_PI);//右足首ロール
+
+   XM_serial.dt=1.0;//1s
+   XM_serial.angle_time_writes();
+}
+
+void XMInput(double (&link_q)[15][NR_TIMER_INTERRUPTS],int w_count)
+{
+   XM_serial.angle[0]=-1*link_q[2][w_count]*(180/M_PI);//右股ロール
+   XM_serial.angle[1]=link_q[3][w_count]*(180/M_PI);//右股ピッチ
+   XM_serial.angle[2]=-1*link_q[5][w_count]*(180/M_PI);//右足首ピッチ
+   XM_serial.angle[3]=link_q[6][w_count]*(180/M_PI);//右足首ロール
+   XM_serial.angle[4]=-1*link_q[9][w_count]*(180/M_PI);//左股ロール
+   XM_serial.angle[5]=-1*link_q[10][w_count]*(180/M_PI);//左股ピッチ
+   XM_serial.angle[6]=link_q[12][w_count]*(180/M_PI);//右足首ピッチ
+   XM_serial.angle[7]=link_q[13][w_count]*(180/M_PI);//右足首ロール
+
+   XM_serial.dt=0.02;//20ms
+   XM_serial.angle_time_writes();
+
+}
+
+
+//timer
 void timer_handler(int signam)
 {
     if(remaining==NR_TIMER_INTERRUPTS)
@@ -566,12 +504,16 @@ void timer_handler(int signam)
         endtime=clock()-starttime;
         cout<<"歩行終了時間"<<endtime<<"s"<<endl;
     }
+
     t=clock();
     dt=t-oldt;
     cout<<dt<<"ms"<<endl;
     oldt=t;
-    ServoInput(link_q,RS405CB,RS_serial,w_count);
+
+    RSInput(link_q,RS405CB,RS_serial,w_count);
     ECmotorInput(link_q,Arduino,w_count);
+    XMInput(link_q,w_count);
+
     w_count++;
 
     remaining--;

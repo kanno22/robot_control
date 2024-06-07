@@ -170,7 +170,7 @@ void serial_read()
   if(Serial.available() >0)
   {
      RlegDisp_ref = Serial.parseFloat();
-     RlegDisp_ref = Serial.parseFloat();
+     LlegDisp_ref = Serial.parseFloat();
 
      Receive=true;
 
