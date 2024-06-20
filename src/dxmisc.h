@@ -28,8 +28,8 @@ extern "C" {
 #define _COMPORT    "/dev/ttyUSB0"  // ポート名
 #define _COMPORT2   "/dev/ttyUSB1"
 #endif
-#define _BAUDRATE   (57600)         // ボーレート[bps]
-#define _TARGETID   (2)             // 対象ID
+#define _BAUDRATE   (115200)         // ボーレート[bps]
+#define _TARGETID   (1)             // 対象ID
 #define _TARGETID2  (2)             // 対象ID
 
 #ifndef _WIN32  // LinuxやmacOS時

@@ -8,7 +8,7 @@
 
 #include<iostream>
 
-#define ZC 0.33//0.4//0.45
+#define ZC 0.215//0.165//0.33//0.4//0.45
 
 using namespace Eigen;
 

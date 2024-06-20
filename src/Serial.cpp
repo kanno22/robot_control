@@ -17,11 +17,11 @@ serial::~serial()
   }
 }
 
-bool serial::s_open(const BaudRate &rate) 
+bool serial::s_open(const BaudRate &rate,const char *port) 
 {
-  fd = open(SERIAL_PORT, O_RDWR | O_NOCTTY | O_NDELAY);
+  fd = open(port, O_RDWR | O_NOCTTY | O_NDELAY);
   if (fd == kError) {
-    cout << "Device open error. device : \"" << SERIAL_PORT << "\""<< endl;
+    cout << "Device open error. device : \"" << port << "\""<< endl;
     return false;
   }
 

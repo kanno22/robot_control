@@ -18,8 +18,8 @@
 //シリアル
 float RlegDisp_ref=0.0;//PCから受信した目標位置
 float LlegDisp_ref=0.0;
-float RlegDisp_old=0.0;
-float LlegDisp_old=0.0;
+float RlegDisp_ref_kari=0.0;
+float LlegDisp_ref_kari=0.0;
 
 
 bool Receive=false;
@@ -41,13 +41,16 @@ IMU imu;
 CAN epos;
 //Inputgenerator inputgenerator;
 
+//時間計測
+unsigned long starttime,endtime;
+
 void setup() 
 {
   char sbuf[60];
   Serial.begin(115200);
   
-  imu.IMU_Init();
-  Init_Encode();
+ // imu.IMU_Init();
+ // Init_Encode();
   epos.CAN_init(EposNodeID_R,EposNodeID_L);
 /////////////////右足EPOSをPPMモードに設定
   sprintf(sbuf, "SetPPM ID:%d, rtn:%d",EposNodeID_R,  epos.SetPPM(EposNodeID_R) );
@@ -56,14 +59,14 @@ void setup()
   sprintf(sbuf, "IsFault rtn:%d", epos.IsFault(EposNodeID_R) );//0正常
   Serial.println(sbuf);
 /////////////////左足EPOSをPPMモードに設定
-  sprintf(sbuf, "SetPPM ID:%d, rtn:%d",EposNodeID_L,  epos.SetPPM(EposNodeID_L) );
+ /* sprintf(sbuf, "SetPPM ID:%d, rtn:%d",EposNodeID_L,  epos.SetPPM(EposNodeID_L) );
   Serial.println(sbuf);
   
   sprintf(sbuf, "IsFault rtn:%d", epos.IsFault(EposNodeID_L) );
-  Serial.println(sbuf);
+  Serial.println(sbuf);*/
 /////////////////  
-  attachInterrupt(Rinterrupt, REncode, CHANGE);
-  attachInterrupt(Linterrupt, LEncode, CHANGE);
+ // attachInterrupt(Rinterrupt, REncode, CHANGE);
+ // attachInterrupt(Linterrupt, LEncode, CHANGE);
 
 ////////////////
   pinMode(7,OUTPUT);
@@ -73,14 +76,23 @@ void setup()
 
 void loop() 
 {
-  imu.IMU_sense();//ロール・ピッチ・ヨー角の算出
-  CallDisp();//右、左足のストロークの算出
+  //imu.IMU_sense();//ロール・ピッチ・ヨー角の算出
+  //CallDisp();//右、左足のストロークの算出
   serial_read();
- // Input();
+
+// starttime=millis();
+// Input();
+// endtime=millis();
+
+ //Serial.println(endtime-starttime);
+
   if(Receive==true)
   { 
+    
+  //  RlegDisp_ref+=0.0001;
+  //  LlegDisp_ref+=0.0001;
     Input();
-   // serial_write();
+    serial_write();
     Receive=false;
          
   }
@@ -91,13 +103,18 @@ void Input()//BLDCへの指令値印加
 {
 
   RlegAngle_ref=(int)((24/PI)*(RlegDisp_ref/GEAR_RADIUS));//1qc=7.5deg　正：上
-  LlegAngle_ref=(int)(-1*(24/PI)*(LlegDisp_ref/GEAR_RADIUS));//正：下->マイナスを×
+  //LlegAngle_ref=(int)(-1*(24/PI)*(LlegDisp_ref/GEAR_RADIUS));//正：下->マイナスを×
+
+  //
+ //  Serial.println("RlegAngle_ref=%d",RlegAngle_ref);
+  // Serial.println("LlegAngle_ref=%d",LlegAngle_ref);
+  //
 
   epos.SetTargetPosition(EposNodeID_R,RlegAngle_ref);
   epos.StartPositioningPPM(EposNodeID_R,0,0);
 
-  epos.SetTargetPosition(EposNodeID_L,LlegAngle_ref);
-  epos.StartPositioningPPM(EposNodeID_L,0,0);
+  //epos.SetTargetPosition(EposNodeID_L,LlegAngle_ref);
+  //epos.StartPositioningPPM(EposNodeID_L,0,0);
   //inputgenerator.Counter();
 }
 
@@ -174,29 +191,22 @@ void serial_read()
   if(Serial.available() >0)
   {
      RlegDisp_ref = Serial.parseFloat();
-     LlegDisp_ref = Serial.parseFloat();
+   //  LlegDisp_ref  = Serial.parseFloat();
 
      Receive=true;
     
-//    if((abs(RlegDisp_ref-RlegDisp_old)>0.01)||(abs(LlegDisp_ref-LlegDisp_old)>0.01))
-//    {
-//      RlegDisp_ref=RlegDisp_old;
-//      LlegDisp_ref=LlegDisp_ref;
-//    }
- 
-
     while(Serial.available() > 0)
     {
       char t=Serial.read();//受信バッファクリア
     }
-  //  RlegDisp_old=RlegDisp_ref;
-  //  LlegDisp_old=LlegDisp_ref;
+
   }
 
 }
 
 void serial_write()
 {
+  Serial.println(RlegDisp_ref);
   /*
   Serial.print(imu.yaw*(180/PI));
   Serial.print(imu.roll*(180/PI));

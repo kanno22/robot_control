@@ -11,6 +11,8 @@
 #include <unistd.h>
 
 #define SERIAL_PORT "/dev/ttyACM0"
+#define SERIAL_PORT_2 "/dev/ttyACM1"
+
 
 using namespace std;
 
@@ -34,7 +36,7 @@ class serial
 
         serial();
         virtual ~serial();
-        bool s_open(const BaudRate &baudrate);
+        bool s_open(const BaudRate &baudrate,const char *port);
         bool s_write(const string &str);
         string s_read(const bool wait=true, const char terminate='\0');
         void s_close();

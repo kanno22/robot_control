@@ -24,9 +24,10 @@ class Dynamixel
     void close();
     void set_LEDs(bool enable);
     void set_OperatingModes();
+    void set_DriveModes();
     void torque_enables(bool enable);
-    void angle_time_writes();
-
+    void angle_time_writes2();
+    
 };
 
 #endif

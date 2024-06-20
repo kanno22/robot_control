@@ -28,7 +28,7 @@ using namespace std;
     
         t=0.0;
         tcount=0;
-        dt=0.01*2;//10ms
+        dt=0.01;//*2;//10ms
 
         tofrom=0;
         Rstart=0;

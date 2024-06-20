@@ -43,6 +43,16 @@ void Dynamixel::set_OperatingModes()
   }
 }
 
+void Dynamixel::set_DriveModes()
+{
+  if(dev != 0)
+  {
+    DXL_SetDriveModesEquival(dev,ids,ID_NUMBER,OPMODE); 
+  }
+
+}
+
+
 void Dynamixel::torque_enables(bool enable)
 {
   if(dev != 0)
@@ -55,13 +65,13 @@ void Dynamixel::torque_enables(bool enable)
 
 }
 
-void Dynamixel::angle_time_writes()
+void Dynamixel::angle_time_writes2()
 {
   if(dev != 0)
   {
     if(setop != 0)
     {
-      DXL_SetGoalAnglesAndTime(dev,ids,angle,ID_NUMBER,dt);
+      DXL_SetGoalAnglesAndTime2(dev,ids,angle,ID_NUMBER,dt);
     }
   }
 
