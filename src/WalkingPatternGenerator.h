@@ -8,7 +8,11 @@
 
 #include<iostream>
 
-#define ZC 0.215//0.165//0.33//0.4//0.45
+#define ZC 0.255//0.235//0.235//0.215//0.165//0.33//0.4//0.45
+#define DTNUM 1.0//2.0
+#define DWR 0.0//-0.01//-0.025//ZMPより足リンク位置は左右2.5cmほど外側に設定
+#define DWL 0.0//0.01//0.025//ZMPより足リンク位置は左右2.5cmほど外側に設定
+
 
 using namespace Eigen;
 
@@ -21,6 +25,9 @@ class walkingpatterngenerator
         Vector3d prefl;//左足目標位置
         Matrix3d Rrefr;//右足目標姿勢
         Matrix3d Rrefl;//左足目標姿勢
+
+        Vector3d dprefr;
+        Vector3d dprefl;
 
         double zc;       //重心高さ
         double g;        //重力加速度

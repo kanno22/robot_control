@@ -21,4 +21,5 @@ RobotLink::RobotLink()
 
     q=0.0;      //関節変位[rad]
     qref=0.0;   //目標関節変位[rad]
+    get_q=0.0;
 }

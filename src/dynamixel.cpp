@@ -76,3 +76,29 @@ void Dynamixel::angle_time_writes2()
   }
 
 }
+
+void Dynamixel::get_angles()
+{
+  if(dev != 0)
+  {
+    if(setop != 0)
+    {
+      DXL_GetPresentAngles(dev,ids,angle_g,ID_NUMBER);
+    }
+  }
+
+}
+
+
+void Dynamixel::get_angle()
+{
+  if(dev != 0)
+  {
+    if(setop != 0)
+    {
+      DXL_GetPresentAngle(dev,XMID1,&angle_g[4]);//左股ロール
+      DXL_GetPresentAngle(dev,XMID2,&angle_g[7]);//左股ロール
+    }
+  }
+
+}

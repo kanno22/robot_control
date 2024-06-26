@@ -66,7 +66,7 @@ void setup()
   Serial.println(sbuf);*/
 /////////////////  
  // attachInterrupt(Rinterrupt, REncode, CHANGE);
- // attachInterrupt(Linterrupt, LEncode, CHANGE);
+  attachInterrupt(Linterrupt, LEncode, CHANGE);
 
 ////////////////
   pinMode(7,OUTPUT);
@@ -80,17 +80,9 @@ void loop()
   //CallDisp();//右、左足のストロークの算出
   serial_read();
 
-// starttime=millis();
-// Input();
-// endtime=millis();
-
- //Serial.println(endtime-starttime);
-
   if(Receive==true)
   { 
     
-  //  RlegDisp_ref+=0.0001;
-  //  LlegDisp_ref+=0.0001;
     Input();
     serial_write();
     Receive=false;
@@ -206,7 +198,7 @@ void serial_read()
 
 void serial_write()
 {
-  Serial.println(RlegDisp_ref);
+  Serial.println(Lcount);
   /*
   Serial.print(imu.yaw*(180/PI));
   Serial.print(imu.roll*(180/PI));

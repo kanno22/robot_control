@@ -17,11 +17,30 @@ void DataLog::logging(RobotLink link[],walkingpatterngenerator gene)
  {
     mylog2.open(FILE_NAME_2,std::ios::trunc);//上書きモード
 
-    mylog2<<"time\t"<<"Rleg_l\t"<<"Lleg_l\t"<<endl;
+   // mylog2<<"time\t"<<"Rleg_l\t"<<"Lleg_l\t"<<endl;
+   mylog2<<"time\t"<<"R_C_yaw\t"<<"R_C_roll\t"<<"R_C_pitch\t"<<"R_Linear\t"<<"R_A_pitch\t"<<"R_A_roll\t"<<"L_C_yaw\t"<<"L_C_roll\t"<<"L_C_pitch\t"<<"L_Linear\t"<<"L_A_pitch\t"<<"L_A_roll\t"<<endl;
 
  }
 
  void DataLog::logging_2(RobotLink link[],walkingpatterngenerator gene)
 {
-    mylog2<<gene.t<<"\t"<<link[4].q<<"\t"<<link[11].q<<endl;
+   // mylog2<<gene.t<<"\t"<<link[4].q<<"\t"<<link[11].q<<endl;
+    mylog2<<gene.t<<"\t"<<link[1].q*(180/M_PI)<<"\t"<<link[2].q*(180/M_PI)<<"\t"<<link[3].q*(180/M_PI)<<"\t"<<link[4].q<<"\t"<<link[5].q*(180/M_PI)<<"\t"<<link[6].q*(180/M_PI)<<"\t"<<link[8].q*(180/M_PI)<<"\t"<<link[9].q*(180/M_PI)<<"\t"<<link[10].q*(180/M_PI)<<"\t"<<link[11].q<<"\t"<<link[12].q*(180/M_PI)<<"\t"<<link[13].q*(180/M_PI)<<"\t"<<endl;
+
+}
+
+ void DataLog::log3_init()
+ {
+    mylog3.open(FILE_NAME_3,std::ios::trunc);//上書きモード
+
+   // mylog2<<"time\t"<<"Rleg_l\t"<<"Lleg_l\t"<<endl;
+   mylog3<<"L_C_roll\t"<<"L_A_roll\t"<<endl;
+
+ }
+
+ void DataLog::logging_3(RobotLink link[])
+{
+   // mylog2<<gene.t<<"\t"<<link[4].q<<"\t"<<link[11].q<<endl;
+    mylog3<<link[9].get_q<<"\t"<<link[13].get_q<<"\t"<<endl;
+
 }

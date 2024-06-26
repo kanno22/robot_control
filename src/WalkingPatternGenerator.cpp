@@ -13,6 +13,9 @@ using namespace std;
         Rrefr<< 1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0;
         Rrefl<< 1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0;
 
+        dprefr={0.0,DWR,0.0};
+        dprefl={0.0,DWL,0.0};
+
         zc=ZC;       //[m]
         g=9.81;        //[m/s^2]
         Tc=sqrt(zc/g);
@@ -28,7 +31,7 @@ using namespace std;
     
         t=0.0;
         tcount=0;
-        dt=0.01;//*2;//10ms
+        dt=0.01*DTNUM;//*1.5;//*2;//10ms
 
         tofrom=0;
         Rstart=0;
@@ -36,7 +39,7 @@ using namespace std;
 
         Rx=0.0;
         Ry=0.0;
-        Rz=0.03;//4cm足を上げる
+        Rz=0.02;//0.04;//4cm足を上げる
         w=0.0;
     };
 
@@ -102,7 +105,7 @@ using namespace std;
         if((stepcount==0)&&(tcount==0))//n=1の着地位置を算出 定常歩行stepcount==2
         {
             wp[stepcount].P(0)=Prefr(0);
-            wp[stepcount].P(1)=Prefr(1);
+            wp[stepcount].P(1)=Prefr(1)-DWR;
 
             //定常歩行
             // wp[stepcount-1].Pref={0.0,0.196};
@@ -206,9 +209,9 @@ using namespace std;
 
         }
 
-        linkref[0].p=prefr;
+        linkref[0].p=prefr+dprefr;
         linkref[0].R=Rrefr;
-        linkref[1].p=prefl;
+        linkref[1].p=prefl+dprefl;
         linkref[1].R=Rrefr;
     };
 

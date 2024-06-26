@@ -19,6 +19,7 @@ class RobotLink
         Vector3d b;     //相対位置ベクトル
         double q;      //関節変位[rad]
         double qref;   //目標関節変位[rad]
+        double get_q;
 };
 
 #endif

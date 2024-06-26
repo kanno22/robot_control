@@ -19,17 +19,21 @@
 #define MESSAGE "timer_handler() is called.\n"
 #define INIT_WAIT_SEC 2
 #define INTERVAL_SEC 0
-#define INTERVAL_MICROSEC 10000//*2//10ms=10000μs
-#define NR_TIMER_INTERRUPTS 900//1625///2//625/2//1100/2//950/2//840/2//560//繰り返し回数 0.8*7 
+#define INTERVAL_MICROSEC 10000*DTNUM//*1.5//*2//10ms=10000μs
+#define NR_TIMER_INTERRUPTS 900//720//900//450//600//900//1625///2//625/2//1100/2//950/2//840/2//560//繰り返し回数 0.8*7 
 
 static int remaining = NR_TIMER_INTERRUPTS;
 struct sigaction action, old_action;
 struct itimerval timer, old_timer;
 ///
 
-#define START 0.0001//0.000035//0.03//0.05//0.0004 0.0025 0.8 
+#define START 0.00016//0.00055//t=0.8//0.00016//t1.0//0.00021//0.000125//0.000035//0.00016//0.0001//0.000035//0.03//0.05//0.0004 0.0025 0.8 
+#define WX 0.0//0.1//0.15//0.10
+#define WY 0.08//0.105
+#define TSUP 1.0//0.8//1.0
 #define TIMER
 #define TEST
+#define MEASURE
 #define INITTIME 1000000//1s
 
 ///
@@ -57,6 +61,8 @@ double calcTime();//時間計測
     RobotLink LINK[15];//
     RobotLink linkref[2];
     double link_q[15][NR_TIMER_INTERRUPTS];//目標関節変位を格納する配列
+    double link_get_q[15][NR_TIMER_INTERRUPTS];//取得した関節変位を格納する配列
+    
 
     Kinematics kine;
     walkingparameters wp[18];//numpsteps
@@ -88,6 +94,7 @@ int main()
 
     datalog.log_init();
     datalog.log2_init();
+    datalog.log3_init();
     //////////////////////////////////
     
     Arduino.s_open(serial::kB115200,SERIAL_PORT);
@@ -143,12 +150,12 @@ int main()
     usleep(INITTIME );
 #else
        //////////////////////////////////
-    LINK[0].p={0.0,0.045,ZC};//{0.0,0.02,0.385};
+    LINK[0].p={0.0,WY/2,ZC};//{0.0,0.02,0.385};
     LINK[0].R<< 1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0;
 
-    linkref[0].p={0.0,0.0,0.0};//右足{0.0,0.0,0.0}
+    linkref[0].p={0.0,DWR,0.0};//右足{0.0,0.0,0.0}
     linkref[0].R<< 1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0;
-    linkref[1].p={0.0,0.09,0.0};//右足{0.0,0.196,0.0}
+    linkref[1].p={0.0,WY+DWL,0.0};//右足{0.0,0.196,0.0}
     linkref[1].R<< 1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0;
 
     kine.InverseKinematics(LINK,linkref[0].p,linkref[0].R,tofrom,LINK[1].ID);
@@ -168,7 +175,7 @@ int main()
       
     for(int i=0;i<200;i++)//2s
     {
-        LINK[0].p={0.0,((START-0.045)/2.0)*gene.t+0.045,ZC};//{0.0,0.02,0.385};
+        LINK[0].p={0.0,((START-(WY/2))/2.0)*gene.t+(WY/2),ZC};//{0.0,0.02,0.385};
         LINK[0].R<< 1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0;
         kine.InverseKinematics(LINK,linkref[0].p,linkref[0].R,tofrom,LINK[1].ID);
         kine.InverseKinematics(LINK,linkref[1].p,linkref[1].R,tofrom,LINK[8].ID);
@@ -227,6 +234,18 @@ int main()
     timer_close();
     #endif
 
+    #ifndef MEASURE
+    for(int i=0;i<NR_TIMER_INTERRUPTS;i++)
+    {
+       LINK[9].get_q=link_get_q[9][i];
+       LINK[13].get_q=link_get_q[13][i];
+
+        datalog.logging_3(LINK);
+    }
+
+    #endif
+
+
 #endif
 
     for(int i=0;i<RSNUM;i++)
@@ -263,7 +282,7 @@ void LinkInit(RobotLink LINK[], int linknum)
     //右足
     LINK[1].parentID = 0;//右足ヨー
     LINK[1].a = {0.0, 0.0, 1.0};
-    LINK[1].b = {0.00, -0.051, 0.085};//重心の前後方向の位置を調節するならここ 45+35+3
+    LINK[1].b = {0.00, -0.051, 0.065};//重心の前後方向の位置を調節するならここ 0.085
 
     LINK[2].parentID = 1;//右足ロール
     LINK[2].a = {1.0, 0.0, 0.0};
@@ -292,7 +311,7 @@ void LinkInit(RobotLink LINK[], int linknum)
     //左足
     LINK[8].parentID = 0;
     LINK[8].a = {0.0, 0.0, 1.0};
-    LINK[8].b = {0.00, 0.051, 0.085};
+    LINK[8].b = {0.00, 0.051, 0.065};
 
     LINK[9].parentID = 8;
     LINK[9].a = {1.0, 0.0, 0.0};
@@ -327,43 +346,43 @@ void WPInit(walkingparameters wp[])
     wp[0].Pref={0.0,0.0};//目標着地位置
     wp[0].P=wp[0].Pref;//修正着地位置
     wp[0].S={0.0,0.0};//歩行パラメータ
-    wp[0].Tsup=1.0;//歩行周期
+    wp[0].Tsup=TSUP;//歩行周期
     wp[0].Tdbl=0.24;//両足支持期
 
-    wp[1].S={0.0,0.09};//歩行パラメータ
-    wp[1].Tsup=1.0;//歩行周期
+    wp[1].S={0.0,WY};//歩行パラメータ
+    wp[1].Tsup=TSUP;//歩行周期
     wp[1].Tdbl=0.24;//両足支持期
 
-    wp[2].S={0.10,0.09};//歩行パラメータ
-    wp[2].Tsup=1.0;//歩行周期
+    wp[2].S={WX/2,WY};//歩行パラメータ
+    wp[2].Tsup=TSUP;//歩行周期
     wp[2].Tdbl=0.24;//両足支持期
 
-    wp[3].S={0.10,0.09};//歩行パラメータ
-    wp[3].Tsup=1.0;//歩行周期
+    wp[3].S={WX,WY};//歩行パラメータ
+    wp[3].Tsup=TSUP;//歩行周期
     wp[3].Tdbl=0.24;//両足支持期
 
-    wp[4].S={0.10,0.09};//歩行パラメータ
-    wp[4].Tsup=1.0;//歩行周期
+    wp[4].S={WX,WY};//歩行パラメータ
+    wp[4].Tsup=TSUP;//歩行周期
     wp[4].Tdbl=0.24;//両足支持期
 
-    wp[5].S={0.10,0.09};//歩行パラメータ
-    wp[5].Tsup=1.0;//歩行周期
+    wp[5].S={WX,WY};//歩行パラメータ
+    wp[5].Tsup=TSUP;//歩行周期
     wp[5].Tdbl=0.24;//両足支持期
 
-    wp[6].S={0.10,0.09};//歩行パラメータ
-    wp[6].Tsup=1.0;//歩行周期
+    wp[6].S={WX,WY};//歩行パラメータ
+    wp[6].Tsup=TSUP;//歩行周期
     wp[6].Tdbl=0.24;//両足支持期
 
-    wp[7].S={0.10,0.09};//歩行パラメータ
-    wp[7].Tsup=1.0;//歩行周期
+    wp[7].S={WX,WY};//歩行パラメータ
+    wp[7].Tsup=TSUP;//歩行周期
     wp[7].Tdbl=0.24;//両足支持期
 
-    wp[8].S={0.0,0.09};//歩行パラメータ
-    wp[8].Tsup=1.0;//歩行周期
+    wp[8].S={0.0,WY};//歩行パラメータ
+    wp[8].Tsup=TSUP;//歩行周期
     wp[8].Tdbl=0.24;//両足支持期
 
-    wp[9].S={0.0,0.0};//歩行パラメータ
-    wp[9].Tsup=1.0;//歩行周期
+    wp[9].S={0.0,WY};//歩行パラメータ
+    wp[9].Tsup=TSUP;//歩行周期
     wp[9].Tdbl=0.24;//両足支持期
 /*
     wp[8].S={0.10,0.08};//歩行パラメータ
@@ -437,7 +456,7 @@ void RSInput(double (&link_q)[15][NR_TIMER_INTERRUPTS],Servo_data RS405CB[],Serv
     //送信
     for(int i=0;i<RSNUM;i++)
     {
-        RS405CB[i].dt_ref=1;//*2;//10ms
+        RS405CB[i].dt_ref=1*DTNUM;//*1.5;//*2;//10ms
         RS_serial.rs_move(RS405CB[i]);
     }
 }
@@ -474,12 +493,12 @@ void XMInput_init(double (&link_q)[15][NR_TIMER_INTERRUPTS])
     cout<<"XMInput_init"<<endl;
 
    XM_serial.angle[0]=-1*link_q[2][0]*(180/M_PI);//右股ロール
-   XM_serial.angle[1]=link_q[3][0]*(180/M_PI);//右股ピッチ
-   XM_serial.angle[2]=-1*link_q[5][0]*(180/M_PI);//右足首ピッチ
+   XM_serial.angle[1]=-1*link_q[3][0]*(180/M_PI);//右股ピッチ
+   XM_serial.angle[2]=link_q[5][0]*(180/M_PI);//右足首ピッチ
    XM_serial.angle[3]=link_q[6][0]*(180/M_PI);//右足首ロール
    XM_serial.angle[4]=-1*link_q[9][0]*(180/M_PI);//左股ロール
-   XM_serial.angle[5]=-1*link_q[10][0]*(180/M_PI);//左股ピッチ
-   XM_serial.angle[6]=link_q[12][0]*(180/M_PI);//右足首ピッチ
+   XM_serial.angle[5]=link_q[10][0]*(180/M_PI);//左股ピッチ
+   XM_serial.angle[6]=-1*link_q[12][0]*(180/M_PI);//右足首ピッチ
    XM_serial.angle[7]=link_q[13][0]*(180/M_PI);//右足首ロール
 
    XM_serial.dt=1.0;//1s
@@ -489,17 +508,24 @@ void XMInput_init(double (&link_q)[15][NR_TIMER_INTERRUPTS])
 void XMInput(double (&link_q)[15][NR_TIMER_INTERRUPTS],int w_count)
 {
    XM_serial.angle[0]=-1*link_q[2][w_count]*(180/M_PI);//右股ロール
-   XM_serial.angle[1]=link_q[3][w_count]*(180/M_PI);//右股ピッチ
-   XM_serial.angle[2]=-1*link_q[5][w_count]*(180/M_PI);//右足首ピッチ
+   XM_serial.angle[1]=-1*link_q[3][w_count]*(180/M_PI);//右股ピッチ
+   XM_serial.angle[2]=link_q[5][w_count]*(180/M_PI);//右足首ピッチ
    XM_serial.angle[3]=link_q[6][w_count]*(180/M_PI);//右足首ロール
    XM_serial.angle[4]=-1*link_q[9][w_count]*(180/M_PI);//左股ロール
-   XM_serial.angle[5]=-1*link_q[10][w_count]*(180/M_PI);//左股ピッチ
-   XM_serial.angle[6]=link_q[12][w_count]*(180/M_PI);//右足首ピッチ
+   XM_serial.angle[5]=link_q[10][w_count]*(180/M_PI);//左股ピッチ
+   XM_serial.angle[6]=-1*link_q[12][w_count]*(180/M_PI);//右足首ピッチ
    XM_serial.angle[7]=link_q[13][w_count]*(180/M_PI);//右足首ロール
 
-   XM_serial.dt=0.01;//*2;//10ms
+   XM_serial.dt=0.01*DTNUM;//*1.5;//*2;//10ms
    
    XM_serial.angle_time_writes2();
+
+   #ifndef MEASURE
+   XM_serial.get_angle();
+   link_get_q[9][w_count]=-1*XM_serial.angle_g[4];
+   link_get_q[13][w_count]=XM_serial.angle_g[7];
+   
+   #endif
 
 }
 
@@ -526,7 +552,7 @@ void timer_handler(int signam)
     
     RSInput(link_q,RS405CB,RS_serial,w_count);
     ECmotorInput(link_q,Arduino,Arduino2,w_count);
-    cout<<"受け取り"<<Arduino.s_read()<<endl;
+  //  cout<<"受け取り"<<Arduino.s_read()<<endl;
     XMInput(link_q,w_count);
     
     w_count++;
