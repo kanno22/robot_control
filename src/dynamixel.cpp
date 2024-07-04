@@ -102,3 +102,16 @@ void Dynamixel::get_angle()
   }
 
 }
+
+void Dynamixel::get_current()
+{
+  if(dev != 0)
+  {
+    if(setop != 0)
+    {
+      DXL_GetPresentCurrent(dev,XMID1,&current_g[4]);//左股ロール
+      DXL_GetPresentCurrent(dev,XMID2,&current_g[7]);//左股ロール
+    }
+  }
+
+}

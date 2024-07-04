@@ -34,13 +34,13 @@ void DataLog::logging(RobotLink link[],walkingpatterngenerator gene)
     mylog3.open(FILE_NAME_3,std::ios::trunc);//上書きモード
 
    // mylog2<<"time\t"<<"Rleg_l\t"<<"Lleg_l\t"<<endl;
-   mylog3<<"L_C_roll\t"<<"L_A_roll\t"<<endl;
+   mylog3<<"L_C_roll\t"<<"L_A_roll\t"<<"L_Linear\t"<<"L_C_roll_c\t"<<"L_A_roll_c\t"<<endl;
 
  }
 
  void DataLog::logging_3(RobotLink link[])
 {
    // mylog2<<gene.t<<"\t"<<link[4].q<<"\t"<<link[11].q<<endl;
-    mylog3<<link[9].get_q<<"\t"<<link[13].get_q<<"\t"<<endl;
+    mylog3<<link[9].get_q<<"\t"<<link[13].get_q<<"\t"<<link[11].get_q<<"\t"<<link[9].get_c<<"\t"<<link[13].get_c<<"\t"<<endl;
 
 }

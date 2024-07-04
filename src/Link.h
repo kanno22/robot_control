@@ -20,6 +20,7 @@ class RobotLink
         double q;      //関節変位[rad]
         double qref;   //目標関節変位[rad]
         double get_q;
+        double get_c;
 };
 
 #endif

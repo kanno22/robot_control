@@ -20,7 +20,7 @@
 #define INIT_WAIT_SEC 2
 #define INTERVAL_SEC 0
 #define INTERVAL_MICROSEC 10000*DTNUM//*1.5//*2//10ms=10000μs
-#define NR_TIMER_INTERRUPTS 900//720//900//450//600//900//1625///2//625/2//1100/2//950/2//840/2//560//繰り返し回数 0.8*7 
+#define NR_TIMER_INTERRUPTS 360//900//720//900//450//600//900//1625///2//625/2//1100/2//950/2//840/2//560//繰り返し回数 0.8*7 
 
 static int remaining = NR_TIMER_INTERRUPTS;
 struct sigaction action, old_action;
@@ -33,8 +33,13 @@ struct itimerval timer, old_timer;
 #define TSUP 1.0//0.8//1.0
 #define TIMER
 #define TEST
-#define MEASURE
+//#define MEASURE
+#define L_MEASURE
 #define INITTIME 1000000//1s
+
+#define PPR 1024//512*2
+#define PINION_RADIUS 0.0112//[m]
+
 
 ///
 #define RSNUM 2
@@ -62,6 +67,8 @@ double calcTime();//時間計測
     RobotLink linkref[2];
     double link_q[15][NR_TIMER_INTERRUPTS];//目標関節変位を格納する配列
     double link_get_q[15][NR_TIMER_INTERRUPTS];//取得した関節変位を格納する配列
+    double link_get_c[15][NR_TIMER_INTERRUPTS];//取得した電流を格納する配列
+    string linear_get_q[NR_TIMER_INTERRUPTS];
     
 
     Kinematics kine;
@@ -234,18 +241,6 @@ int main()
     timer_close();
     #endif
 
-    #ifndef MEASURE
-    for(int i=0;i<NR_TIMER_INTERRUPTS;i++)
-    {
-       LINK[9].get_q=link_get_q[9][i];
-       LINK[13].get_q=link_get_q[13][i];
-
-        datalog.logging_3(LINK);
-    }
-
-    #endif
-
-
 #endif
 
     for(int i=0;i<RSNUM;i++)
@@ -261,6 +256,29 @@ int main()
     RS_serial.rs_close();
     Arduino2.s_close();
     Arduino.s_close();
+
+    #ifndef MEASURE
+    for(int i=0;i<NR_TIMER_INTERRUPTS;i++)
+    {
+       LINK[9].get_q=link_get_q[9][i];//左股ロール[deg]
+       LINK[13].get_q=link_get_q[13][i];//左足首ロール[deg]
+       LINK[9].get_c=link_get_c[9][i];//左股ロール[mA]
+       LINK[13].get_c=link_get_c[13][i];//左足首ロール[mA]
+
+        datalog.logging_3(LINK);
+    }
+
+    #endif
+    #ifndef L_MEASURE
+    for(int i=0;i<NR_TIMER_INTERRUPTS;i++)
+    {
+       link_get_q[11][i]=(stod(linear_get_q[i])/PPR)*2*M_PI*PINION_RADIUS;
+       LINK[11].get_q=link_get_q[11][i];//左直動
+        
+        datalog.logging_3(LINK);
+    }
+
+    #endif
     
    //////////////////////////////////
 
@@ -486,6 +504,15 @@ void ECmotorInput(double (&link_q)[15][NR_TIMER_INTERRUPTS],serial& Arduino,seri
       cout << "Send Error"  << endl;
     }
 
+    #ifndef L_MEASURE
+    //link_get_q[11][w_count]=(stod(Arduino.s_read())/PPR)*2*M_PI*PINION_RADIUS;
+    //cout<<"受け取り"<<link_get_q[11][w_count]<<"[m]"<<endl;
+    linear_get_q[w_count]=Arduino.s_read();
+    cout<<"受け取り"<<linear_get_q[w_count]<<"[m]"<<endl;
+    #endif
+
+    
+
 }
 
 void XMInput_init(double (&link_q)[15][NR_TIMER_INTERRUPTS])
@@ -522,8 +549,11 @@ void XMInput(double (&link_q)[15][NR_TIMER_INTERRUPTS],int w_count)
 
    #ifndef MEASURE
    XM_serial.get_angle();
+   XM_serial.get_current();
    link_get_q[9][w_count]=-1*XM_serial.angle_g[4];
    link_get_q[13][w_count]=XM_serial.angle_g[7];
+   link_get_c[9][w_count]=-XM_serial.current_g[4];
+   link_get_c[13][w_count]=XM_serial.current_g[7];
    
    #endif
 
@@ -552,7 +582,6 @@ void timer_handler(int signam)
     
     RSInput(link_q,RS405CB,RS_serial,w_count);
     ECmotorInput(link_q,Arduino,Arduino2,w_count);
-  //  cout<<"受け取り"<<Arduino.s_read()<<endl;
     XMInput(link_q,w_count);
     
     w_count++;

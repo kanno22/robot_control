@@ -9,7 +9,7 @@
 #define ID_NUMBER 8
 #define OPMODE 4//Expand Position Control
 #define XMID1 7//角度を取得したいdynamixelのID
-#define XMID2 7//角度を取得したいdynamixelのID
+#define XMID2 10//角度を取得したいdynamixelのID
 
 class Dynamixel
 {
@@ -21,6 +21,7 @@ class Dynamixel
   public:
     double angle[ID_NUMBER];//[deg]
     double angle_g[ID_NUMBER];
+    double current_g[ID_NUMBER];//[mA]
     double dt;//=0.02;//20ms
 
     void open();
@@ -32,6 +33,7 @@ class Dynamixel
     void angle_time_writes2();
     void get_angle();
     void get_angles();
+    void get_current();
     
 };
 

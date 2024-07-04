@@ -15,6 +15,8 @@
 
 #define PPR 1024//512*2
 
+#define MEASURE
+
 //シリアル
 float RlegDisp_ref=0.0;//PCから受信した目標位置
 float LlegDisp_ref=0.0;
@@ -48,9 +50,11 @@ void setup()
 {
   char sbuf[60];
   Serial.begin(115200);
-  
+
+  #ifndef MEASURE
  // imu.IMU_Init();
- // Init_Encode();
+    Init_Encode();
+  #endif
   epos.CAN_init(EposNodeID_R,EposNodeID_L);
 /////////////////右足EPOSをPPMモードに設定
   sprintf(sbuf, "SetPPM ID:%d, rtn:%d",EposNodeID_R,  epos.SetPPM(EposNodeID_R) );
@@ -84,7 +88,11 @@ void loop()
   { 
     
     Input();
+    
+    #ifndef  MEASURE
     serial_write();
+    #endif
+    
     Receive=false;
          
   }
