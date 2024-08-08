@@ -39,7 +39,7 @@ using namespace std;
 
         Rx=0.0;
         Ry=0.0;
-        Rz=0.02;//0.04;//4cm足を上げる
+        Rz=0.008;//0.01;//0.002;//0.04;//4cm足を上げる
         w=0.0;
     };
 
@@ -181,6 +181,17 @@ using namespace std;
                 prefl(2)=0.0;
 
             }
+            else if(stepcount==2)
+            {
+                Rx=(wp[stepcount+1].P(0)-wp[stepcount-1].P(0))/(2*M_PI);
+                Ry=(wp[stepcount+1].P(1)-wp[stepcount-1].P(1))/(2*M_PI);
+
+                prefl(0)=wp[stepcount-1].P(0)+Rx*(w*t-sin(w*t));//遊脚脚
+                prefl(1)=wp[stepcount-1].P(1)+Ry*(w*t-sin(w*t));
+                //prefl(1)=wp[stepcount-1].P(1)+Ry*(w*t-sin(w*t))+0.01*(1-cos(w*t));
+                prefl(2)=(Rz/2)*(1-cos(w*t));
+
+            }
             else
             {
                 Rx=(wp[stepcount+1].P(0)-wp[stepcount-1].P(0))/(2*M_PI);
@@ -188,12 +199,14 @@ using namespace std;
 
                 prefl(0)=wp[stepcount-1].P(0)+Rx*(w*t-sin(w*t));//遊脚脚
                 prefl(1)=wp[stepcount-1].P(1)+Ry*(w*t-sin(w*t));
+                //prefl(1)=wp[stepcount-1].P(1)+Ry*(w*t-sin(w*t))+0.01*(1-cos(w*t));
                 prefl(2)=Rz*(1-cos(w*t));
             }
 
         }
         else//左足が支持脚
         {
+
             w=(2*M_PI)/wp[stepcount].Tsup;
             
             prefl(0)=wp[stepcount].P(0);//支持脚
@@ -205,7 +218,16 @@ using namespace std;
 
             prefr(0)=wp[stepcount-1].P(0)+Rx*(w*t-sin(w*t));//遊脚脚
             prefr(1)=wp[stepcount-1].P(1)+Ry*(w*t-sin(w*t));
-            prefr(2)=Rz*(1-cos(w*t));
+           // prefr(1)=wp[stepcount-1].P(1)+Ry*(w*t-sin(w*t))-0.01*(1-cos(w*t));
+            
+            if(stepcount==1)
+            {
+                prefr(2)=0.0*(1-cos(w*t));
+            }
+            else
+            {
+                prefr(2)=Rz*(1-cos(w*t));
+            }
 
         }
 

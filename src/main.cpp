@@ -27,14 +27,15 @@ struct sigaction action, old_action;
 struct itimerval timer, old_timer;
 ///
 
-#define START 0.00016//0.00055//t=0.8//0.00016//t1.0//0.00021//0.000125//0.000035//0.00016//0.0001//0.000035//0.03//0.05//0.0004 0.0025 0.8 
-#define WX 0.0//0.1//0.15//0.10
-#define WY 0.08//0.105
+#define START 0.000133//0.000124//0.000114//0.000133//0.000124//0.000114//0.00016//0.00055//t=0.8//0.00016//t1.0//0.00021//0.000125//0.000035//0.00016//0.0001//0.000035//0.03//0.05//0.0004 0.0025 0.8 
+#define WX 0.0//0.05//0.1//0.15//0.10
+#define WY 0.07//0.07//0.06//0.065//0.105
 #define TSUP 1.0//0.8//1.0
 #define TIMER
 #define TEST
 //#define MEASURE
 #define L_MEASURE
+#define ONE_LEG
 #define INITTIME 1000000//1s
 
 #define PPR 1024//512*2
@@ -123,21 +124,21 @@ int main()
     cout<<"XM_torque on"<<endl;
 
 #ifndef TEST
-    link_q[4][0]=0.04;
-    link_q[11][0]=-0.04;
-    link_q[1][0]=100*(M_PI/1800);
-    link_q[7][0]=-100*(M_PI/1800);
-    link_q[2][0]=10*(M_PI/180);//右股ロール
-    link_q[3][0]=10*(M_PI/180);//右股ピッチ
-    link_q[5][0]=10*(M_PI/180);//右足首ピッチ
-    link_q[6][0]=10*(M_PI/180);//右足首ロール
-    link_q[9][0]=10*(M_PI/180);//左股ロール
-    link_q[10][0]=10*(M_PI/180);//左股ピッチ
-    link_q[12][0]=10*(M_PI/180);//右足首ピッチ
-    link_q[13][0]=10*(M_PI/180);//右足首ロール
+    link_q[4][0]=0.02;
+    link_q[11][0]=-0.02;
+    link_q[1][0]=0*(M_PI/1800);
+    link_q[7][0]=-0*(M_PI/1800);
+    link_q[2][0]=0*(M_PI/180);//右股ロール
+    link_q[3][0]=0*(M_PI/180);//右股ピッチ
+    link_q[5][0]=0*(M_PI/180);//右足首ピッチ
+    link_q[6][0]=0*(M_PI/180);//右足首ロール
+    link_q[9][0]=0*(M_PI/180);//左股ロール
+    link_q[10][0]=0*(M_PI/180);//左股ピッチ
+    link_q[12][0]=0*(M_PI/180);//右足首ピッチ
+    link_q[13][0]=0*(M_PI/180);//右足首ロール
     ECmotorInput(link_q,Arduino,Arduino2,0);
-    RSInput_init(link_q,RS405CB,RS_serial);
-    XMInput_init(link_q);
+   // RSInput_init(link_q,RS405CB,RS_serial);
+   // XMInput_init(link_q);
     usleep(INITTIME );
     link_q[4][0]=0.0;
     link_q[11][0]=0.0;
@@ -152,8 +153,8 @@ int main()
     link_q[12][0]=0*(M_PI/180);//右足首ピッチ
     link_q[13][0]=0*(M_PI/180);//右足首ロール
     ECmotorInput(link_q,Arduino,Arduino2,0);
-    RSInput_init(link_q,RS405CB,RS_serial);
-    XMInput_init(link_q);
+   // RSInput_init(link_q,RS405CB,RS_serial);
+   // XMInput_init(link_q);
     usleep(INITTIME );
 #else
        //////////////////////////////////
@@ -210,9 +211,19 @@ int main()
 
     for(int i=0;i<NR_TIMER_INTERRUPTS;i++)
     {
+        #ifndef ONE_LEG
+        if(i<=60)
+        {
+            gene.PatternGenerator(LINK,linkref,wp,linkref[0].p,linkref[1].p,numsteps);
+            kine.InverseKinematics(LINK,linkref[0].p,linkref[0].R,tofrom,LINK[1].ID);
+            kine.InverseKinematics(LINK,linkref[1].p,linkref[1].R,tofrom,LINK[8].ID);
+
+        }
+        #else
         gene.PatternGenerator(LINK,linkref,wp,linkref[0].p,linkref[1].p,numsteps);
         kine.InverseKinematics(LINK,linkref[0].p,linkref[0].R,tofrom,LINK[1].ID);
         kine.InverseKinematics(LINK,linkref[1].p,linkref[1].R,tofrom,LINK[8].ID);
+        #endif
 
         datalog.logging(LINK,gene);
         datalog.logging_2(LINK,gene);
@@ -253,7 +264,7 @@ int main()
     XM_serial.set_LEDs(false);
 
     XM_serial.close();
-    RS_serial.rs_close();
+   RS_serial.rs_close();
     Arduino2.s_close();
     Arduino.s_close();
 
@@ -300,7 +311,7 @@ void LinkInit(RobotLink LINK[], int linknum)
     //右足
     LINK[1].parentID = 0;//右足ヨー
     LINK[1].a = {0.0, 0.0, 1.0};
-    LINK[1].b = {0.00, -0.051, 0.065};//重心の前後方向の位置を調節するならここ 0.085
+    LINK[1].b = {0.00, -0.03, 0.07};//重心の前後方向の位置を調節するならここ 0.085
 
     LINK[2].parentID = 1;//右足ロール
     LINK[2].a = {1.0, 0.0, 0.0};
@@ -329,7 +340,7 @@ void LinkInit(RobotLink LINK[], int linknum)
     //左足
     LINK[8].parentID = 0;
     LINK[8].a = {0.0, 0.0, 1.0};
-    LINK[8].b = {0.00, 0.051, 0.065};
+    LINK[8].b = {0.00, 0.03, 0.07};
 
     LINK[9].parentID = 8;
     LINK[9].a = {1.0, 0.0, 0.0};
@@ -456,7 +467,7 @@ void RSInput_init(double (&link_q)[15][NR_TIMER_INTERRUPTS],Servo_data RS405CB[]
 {
     cout<<"RSInput_init"<<endl;
 
-    RS405CB[0].Angle_ref=link_q[1][0]*(1800/M_PI); 
+    RS405CB[0].Angle_ref=-50+link_q[1][0]*(1800/M_PI); 
     RS405CB[1].Angle_ref=link_q[7][0]*(1800/M_PI); 
     //送信
     for(int i=0;i<RSNUM;i++)
@@ -469,7 +480,7 @@ void RSInput_init(double (&link_q)[15][NR_TIMER_INTERRUPTS],Servo_data RS405CB[]
 
 void RSInput(double (&link_q)[15][NR_TIMER_INTERRUPTS],Servo_data RS405CB[],Servo_serial& RS_serial,int w_count)
 {
-    RS405CB[0].Angle_ref=link_q[1][w_count]*(1800/M_PI); 
+    RS405CB[0].Angle_ref=-50+link_q[1][w_count]*(1800/M_PI); 
     RS405CB[1].Angle_ref=link_q[7][w_count]*(1800/M_PI); 
     //送信
     for(int i=0;i<RSNUM;i++)
