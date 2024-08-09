@@ -189,7 +189,8 @@ using namespace std;
                 prefl(0)=wp[stepcount-1].P(0)+Rx*(w*t-sin(w*t));//遊脚脚
                 prefl(1)=wp[stepcount-1].P(1)+Ry*(w*t-sin(w*t));
                 //prefl(1)=wp[stepcount-1].P(1)+Ry*(w*t-sin(w*t))+0.01*(1-cos(w*t));
-                prefl(2)=(Rz/2)*(1-cos(w*t));
+               // prefl(2)=(Rz/2)*(1-cos(w*t));
+               prefl(2)=Rz*(1-cos(w*t));
 
             }
             else
@@ -222,7 +223,8 @@ using namespace std;
             
             if(stepcount==1)
             {
-                prefr(2)=0.0*(1-cos(w*t));
+              //  prefr(2)=0.0*(1-cos(w*t));
+                prefr(2)=Rz*(1-cos(w*t));
             }
             else
             {

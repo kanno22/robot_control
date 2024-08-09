@@ -180,3 +180,23 @@ double Kinematics::err(Vector3d p, Vector3d w)
 {
     return p.norm() + w.norm();  //誤差
 }
+
+void Kinematics::CalcMass(RobotLink link[], Robot &robot)
+{
+    for(int i=0; i<LINKNUM; i++)
+    {
+        robot.M+=link[i].m;
+    }
+}
+
+void Kinematics::CalcCoG(RobotLink link[],Robot &robot)
+{
+    for(int i=0; i<LINKNUM; i++)//各リンクの絶対重心位置を算出
+    {
+        link[i].c=link[i].p+link[i].R*link[i].c_;
+        robot.M_cog+=link[i].m*link[i].c;
+    }
+
+    robot.CoG=robot.M_cog/robot.M; //重心位置算出
+
+}

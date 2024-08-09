@@ -19,6 +19,10 @@ class Kinematics
         Matrix<double, 6, TOFROM> Jacobian(RobotLink link[], int tofrom, int start);  //指定されたリンクまでのヤコビ行列を計算
         Vector3d RotmattoAngvec(Matrix3d R);  //回転行列→角速度ベクトル
         double err(Vector3d p, Vector3d w);   //誤差計算
+
+        void CalcMass(RobotLink link[], Robot &robot); //全質量を計算
+        void CalcCoG(RobotLink link[],Robot &robot); //重心位置を計算
+
 };
 
 #endif

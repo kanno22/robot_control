@@ -20,7 +20,7 @@
 #define INIT_WAIT_SEC 2
 #define INTERVAL_SEC 0
 #define INTERVAL_MICROSEC 10000*DTNUM//*1.5//*2//10ms=10000μs
-#define NR_TIMER_INTERRUPTS 360//900//720//900//450//600//900//1625///2//625/2//1100/2//950/2//840/2//560//繰り返し回数 0.8*7 
+#define NR_TIMER_INTERRUPTS 1200//360//900//720//900//450//600//900//1625///2//625/2//1100/2//950/2//840/2//560//繰り返し回数 0.8*7 
 
 static int remaining = NR_TIMER_INTERRUPTS;
 struct sigaction action, old_action;
@@ -33,9 +33,10 @@ struct itimerval timer, old_timer;
 #define TSUP 1.0//0.8//1.0
 #define TIMER
 #define TEST
+#define KINETEST
 //#define MEASURE
 #define L_MEASURE
-#define ONE_LEG
+//#define ONE_LEG
 #define INITTIME 1000000//1s
 
 #define PPR 1024//512*2
@@ -64,7 +65,8 @@ void timer_handler(int signam);//タイマに呼び出される関数
 double calcTime();//時間計測
 
     //////////////////////////////////
-    RobotLink LINK[15];//
+    RobotLink LINK[15];//各リンクの情報
+    Robot robot;//ロボットの質量、重心の情報
     RobotLink linkref[2];
     double link_q[15][NR_TIMER_INTERRUPTS];//目標関節変位を格納する配列
     double link_get_q[15][NR_TIMER_INTERRUPTS];//取得した関節変位を格納する配列
@@ -98,6 +100,28 @@ double calcTime();//時間計測
 int main()
 {
     LinkInit(LINK,linknum);
+
+#ifndef KINETEST
+    kine.CalcMass(LINK,robot);
+    cout<<"Mass="<<robot.M<<endl;
+
+    LINK[0].p={0.0,WY/2,ZC};//{0.0,0.02,0.385};
+    LINK[0].R<< 1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0;
+
+    linkref[0].p={0.0,DWR,0.0};//右足{0.0,0.0,0.0}
+    linkref[0].R<< 1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0;
+    linkref[1].p={0.0,WY+DWL,0.0};//右足{0.0,0.196,0.0}
+    linkref[1].R<< 1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0;
+
+    kine.InverseKinematics(LINK,linkref[0].p,linkref[0].R,tofrom,LINK[1].ID);
+    kine.InverseKinematics(LINK,linkref[1].p,linkref[1].R,tofrom,LINK[8].ID);
+
+    kine.CalcCoG(LINK,robot);
+
+    cout<<"CoG="<<robot.CoG<<endl;
+
+#else
+
     RSInit(RS405CB);
 
     datalog.log_init();
@@ -223,7 +247,7 @@ int main()
         gene.PatternGenerator(LINK,linkref,wp,linkref[0].p,linkref[1].p,numsteps);
         kine.InverseKinematics(LINK,linkref[0].p,linkref[0].R,tofrom,LINK[1].ID);
         kine.InverseKinematics(LINK,linkref[1].p,linkref[1].R,tofrom,LINK[8].ID);
-        #endif
+        #endif //ONE_LEG
 
         datalog.logging(LINK,gene);
         datalog.logging_2(LINK,gene);
@@ -250,9 +274,9 @@ int main()
 
     //////////////////////////////////
     timer_close();
-    #endif
+    #endif //TIMER
 
-#endif
+#endif //TEST
 
     for(int i=0;i<RSNUM;i++)
     {
@@ -279,7 +303,8 @@ int main()
         datalog.logging_3(LINK);
     }
 
-    #endif
+    #endif //MEASURE
+
     #ifndef L_MEASURE
     for(int i=0;i<NR_TIMER_INTERRUPTS;i++)
     {
@@ -289,9 +314,10 @@ int main()
         datalog.logging_3(LINK);
     }
 
-    #endif
+    #endif //L_MEASURE
     
    //////////////////////////////////
+#endif //KINETEST
 
     return 0;
 }
@@ -307,64 +333,102 @@ void LinkInit(RobotLink LINK[], int linknum)
 
     LINK[0].a = {0.0, 0.0, 0.0};  //ルートリンク
     LINK[0].b = {0.0, 0.0, 0.0};
+    LINK[0].c_ ={0.0, 0.0, 0.0};
+    LINK[0].m=0.1;
+
 /**/
     //右足
     LINK[1].parentID = 0;//右足ヨー
     LINK[1].a = {0.0, 0.0, 1.0};
     LINK[1].b = {0.00, -0.03, 0.07};//重心の前後方向の位置を調節するならここ 0.085
+    LINK[1].c_ ={0.0, 0.0, 0.0};
+    LINK[1].m=0.2;
 
     LINK[2].parentID = 1;//右足ロール
     LINK[2].a = {1.0, 0.0, 0.0};
     LINK[2].b = {0.00775, 0.0, 0.0};
+    LINK[2].c_ ={0.0, 0.0, 0.0};
+    LINK[2].m=0.3;
 
     LINK[3].parentID = 2;//右足ピッチ
     LINK[3].a = {0.0, 1.0, 0.0};
     LINK[3].b = {0.0, 0.0, 0.0};
+    LINK[3].c_ ={0.0, 0.0, 0.0};
+    LINK[3].m=0.4;
+
 
     LINK[4].parentID = 3;//右足直動
     LINK[4].a = {0.0, 0.0, 1.0};
     LINK[4].b = {0.0, 0.0, 0.0};
+    LINK[4].c_ ={0.0, 0.0, 0.0};
+    LINK[4].m=0.5;
+
 
     LINK[5].parentID = 4;//右足ピッチ
     LINK[5].a = {0.0, 1.0, 0.0};
     LINK[5].b = {0.0, 0.0, -0.3}; //-0.367//足リンクなし-0.382　重心高さ0.4m -0.327 重心高さ0.45m -0.367
+    LINK[5].c_ ={0.0, 0.0, 0.0};
+    LINK[5].m=0.6;
+
 
     LINK[6].parentID = 5;//右足ロール
     LINK[6].a = {1.0, 0.0, 0.0};
     LINK[6].b = {0.0, 0.0, 0.0};
+    LINK[6].c_ ={0.0, 0.0, 0.0};
+    LINK[6].m=0.7;
+
 
     LINK[7].parentID = 6;//右足先 仮想の回転関節だとする
     LINK[7].a = {0.0, 0.0, 0.0};
     LINK[7].b = {0.0, 0.0, -0.0265};
+    LINK[7].c_ ={0.0, 0.0, 0.0};
+    LINK[7].m=0.8;
+
 
     //左足
     LINK[8].parentID = 0;
     LINK[8].a = {0.0, 0.0, 1.0};
     LINK[8].b = {0.00, 0.03, 0.07};
+    LINK[8].c_ ={0.0, 0.0, 0.0};
+    LINK[8].m=0.2;
+
 
     LINK[9].parentID = 8;
     LINK[9].a = {1.0, 0.0, 0.0};
     LINK[9].b = {0.00775, 0.0, 0.0};
+    LINK[9].c_ ={0.0, 0.0, 0.0};
+    LINK[9].m=0.3;
+
 
     LINK[10].parentID = 9;
     LINK[10].a = {0.0, 1.0, 0.0};
     LINK[10].b = {0.0, 0.0, 0.0};
+    LINK[10].c_ ={0.0, 0.0, 0.0};
+    LINK[10].m=0.4;
 
     LINK[11].parentID = 10;
     LINK[11].a = {0.0, 0.0, 1.0};
     LINK[11].b = {0.0, 0.0, 0.0};
+    LINK[11].c_ ={0.0, 0.0, 0.0};
+    LINK[11].m=0.5;
 
     LINK[12].parentID = 11;
     LINK[12].a = {0.0, 1.0, 0.0};
     LINK[12].b = {0.0, 0.0, -0.3};
+    LINK[12].c_ ={0.0, 0.0, 0.0};
+    LINK[12].m=0.6;
 
     LINK[13].parentID = 12;
     LINK[13].a = {1.0, 0.0, 0.0};
     LINK[13].b = {0.0, 0.0, 0.0};
+    LINK[13].c_ ={0.0, 0.0, 0.0};
+    LINK[13].m=0.7;
 
     LINK[14].parentID = 13;//仮想の回転関節
     LINK[14].a = {0.0, 0.0, 0.0};
     LINK[14].b = {0.0, 0.0, -0.0265};
+    LINK[14].c_ ={0.0, 0.0, 0.0};
+    LINK[14].m=0.8;
 
 }
 
@@ -532,7 +596,7 @@ void XMInput_init(double (&link_q)[15][NR_TIMER_INTERRUPTS])
 
    XM_serial.angle[0]=-1*link_q[2][0]*(180/M_PI);//右股ロール
    XM_serial.angle[1]=-1*link_q[3][0]*(180/M_PI);//右股ピッチ
-   XM_serial.angle[2]=link_q[5][0]*(180/M_PI);//右足首ピッチ
+   XM_serial.angle[2]=-2.0+link_q[5][0]*(180/M_PI);//右足首ピッチ
    XM_serial.angle[3]=link_q[6][0]*(180/M_PI);//右足首ロール
    XM_serial.angle[4]=-1*link_q[9][0]*(180/M_PI);//左股ロール
    XM_serial.angle[5]=link_q[10][0]*(180/M_PI);//左股ピッチ
@@ -547,7 +611,7 @@ void XMInput(double (&link_q)[15][NR_TIMER_INTERRUPTS],int w_count)
 {
    XM_serial.angle[0]=-1*link_q[2][w_count]*(180/M_PI);//右股ロール
    XM_serial.angle[1]=-1*link_q[3][w_count]*(180/M_PI);//右股ピッチ
-   XM_serial.angle[2]=link_q[5][w_count]*(180/M_PI);//右足首ピッチ
+   XM_serial.angle[2]=-2.0+link_q[5][w_count]*(180/M_PI);//右足首ピッチ
    XM_serial.angle[3]=link_q[6][w_count]*(180/M_PI);//右足首ロール
    XM_serial.angle[4]=-1*link_q[9][w_count]*(180/M_PI);//左股ロール
    XM_serial.angle[5]=link_q[10][w_count]*(180/M_PI);//左股ピッチ
