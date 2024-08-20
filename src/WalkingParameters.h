@@ -15,8 +15,12 @@ class walkingparameters
         Vector2d Cvd;//目標最終重心速度
         Vector2d Cpi;//初期重心位置
         Vector2d Cvi;//初期重心速度
+        Vector2d Cai;//初期重心加速度
         Vector2d Cpf;//最終重心位置
         Vector2d Cvf;//最終重心速度
+        Vector2d Caf;//最終重心加速度
+
+        Vector2d dCp;//両足支持期の重心位置・接地位置の増加分
 
         Vector2d Pref;//目標着地位置
         Vector2d P;//修正着地位置

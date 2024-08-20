@@ -10,8 +10,8 @@
 
 #define ZC 0.250//0.235//0.235//0.215//0.165//0.33//0.4//0.45
 #define DTNUM 2.5//1.0//2.0
-#define DWR -0.005//-0.005//-0.01//-0.025//ZMPより足リンク位置は左右2.5cmほど外側に設定
-#define DWL 0.005//0.005//0.01//0.025//ZMPより足リンク位置は左右2.5cmほど外側に設定
+#define DWR 0.0//-0.005//-0.005//-0.01//-0.025//ZMPより足リンク位置は左右2.5cmほど外側に設定
+#define DWL 0.0//0.005//0.005//0.01//0.025//ZMPより足リンク位置は左右2.5cmほど外側に設定
 
 
 using namespace Eigen;
@@ -21,6 +21,7 @@ class walkingpatterngenerator
     private:
         Vector2d Cpref;//重心位置(目標ボディリンク位置)
         Vector2d Cvref;//重心速度
+        Vector2d Caref;//重心加速度
         Vector3d prefr;//右足目標位置
         Vector3d prefl;//左足目標位置
         Matrix3d Rrefr;//右足目標姿勢
@@ -29,18 +30,24 @@ class walkingpatterngenerator
         Vector3d dprefr;
         Vector3d dprefl;
 
+        Vector2d Csum;//両足支持期の増分の総和
+        
         double zc;       //重心高さ
         double g;        //重力加速度
         double Tc;
         double C;       //cosh(Tsup/Tc)
         double S;       //sinh(Tsup/Tc)
-        
+
+        //両足支持期における補間関数の係数
+        Vector2d a0,a1,a2,a3,a4;
+
         //重み関数パラメータ
         double D;       
         double a;       
         double b;
 
         int stepcount;
+        bool sup_dub;//true:片足支持、false:両足支持
     
        // double t;
         int tcount;

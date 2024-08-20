@@ -53,7 +53,7 @@ void setup()
 
   #ifndef MEASURE
  // imu.IMU_Init();
-    Init_Encode();
+  //  Init_Encode();
   #endif
   epos.CAN_init(EposNodeID_R,EposNodeID_L);
 /////////////////右足EPOSをPPMモードに設定
@@ -70,7 +70,7 @@ void setup()
   Serial.println(sbuf);*/
 /////////////////  
  // attachInterrupt(Rinterrupt, REncode, CHANGE);
-  attachInterrupt(Linterrupt, LEncode, CHANGE);
+ // attachInterrupt(Linterrupt, LEncode, CHANGE);
 
 ////////////////
   pinMode(7,OUTPUT);

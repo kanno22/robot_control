@@ -20,23 +20,26 @@
 #define INIT_WAIT_SEC 2
 #define INTERVAL_SEC 0
 #define INTERVAL_MICROSEC 10000*DTNUM//*1.5//*2//10ms=10000μs
-#define NR_TIMER_INTERRUPTS 1200//360//900//720//900//450//600//900//1625///2//625/2//1100/2//950/2//840/2//560//繰り返し回数 0.8*7 
+#define NR_TIMER_INTERRUPTS 432//360//900//720//900//450//600//900//1625///2//625/2//1100/2//950/2//840/2//560//繰り返し回数 0.8*7 
 
 static int remaining = NR_TIMER_INTERRUPTS;
 struct sigaction action, old_action;
 struct itimerval timer, old_timer;
 ///
 
-#define START 0.000133//0.000124//0.000114//0.000133//0.000124//0.000114//0.00016//0.00055//t=0.8//0.00016//t1.0//0.00021//0.000125//0.000035//0.00016//0.0001//0.000035//0.03//0.05//0.0004 0.0025 0.8 
+#define START 0.000095//0.000124//0.000133//0.000124//0.000114//0.000133//0.000124//0.000114//0.00016//0.00055//t=0.8//0.00016//t1.0//0.00021//0.000125//0.000035//0.00016//0.0001//0.000035//0.03//0.05//0.0004 0.0025 0.8 
 #define WX 0.0//0.05//0.1//0.15//0.10
-#define WY 0.07//0.07//0.06//0.065//0.105
+#define WY 0.05//0.07//0.06//0.065//0.105
+#define DWY 0.038 //両足支持期の増分
 #define TSUP 1.0//0.8//1.0
+#define TDBL 0.2
+
 #define TIMER
 #define TEST
 #define KINETEST
 //#define MEASURE
 #define L_MEASURE
-//#define ONE_LEG
+#define ONE_LEG
 #define INITTIME 1000000//1s
 
 #define PPR 1024//512*2
@@ -105,12 +108,12 @@ int main()
     kine.CalcMass(LINK,robot);
     cout<<"Mass="<<robot.M<<endl;
 
-    LINK[0].p={0.0,WY/2,ZC};//{0.0,0.02,0.385};
+    LINK[0].p={0.0,(WY+DWY)/2,ZC};//{0.0,0.02,0.385};
     LINK[0].R<< 1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0;
 
     linkref[0].p={0.0,DWR,0.0};//右足{0.0,0.0,0.0}
     linkref[0].R<< 1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0;
-    linkref[1].p={0.0,WY+DWL,0.0};//右足{0.0,0.196,0.0}
+    linkref[1].p={0.0,WY+DWY+DWL,0.0};//右足{0.0,0.196,0.0}
     linkref[1].R<< 1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0;
 
     kine.InverseKinematics(LINK,linkref[0].p,linkref[0].R,tofrom,LINK[1].ID);
@@ -182,12 +185,12 @@ int main()
     usleep(INITTIME );
 #else
        //////////////////////////////////
-    LINK[0].p={0.0,WY/2,ZC};//{0.0,0.02,0.385};
+    LINK[0].p={0.0,(WY+DWY)/2,ZC};//{0.0,0.02,0.385};
     LINK[0].R<< 1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0;
 
     linkref[0].p={0.0,DWR,0.0};//右足{0.0,0.0,0.0}
     linkref[0].R<< 1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0;
-    linkref[1].p={0.0,WY+DWL,0.0};//右足{0.0,0.196,0.0}
+    linkref[1].p={0.0,WY+DWY+DWL,0.0};//右足{0.0,0.196,0.0}
     linkref[1].R<< 1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0;
 
     kine.InverseKinematics(LINK,linkref[0].p,linkref[0].R,tofrom,LINK[1].ID);
@@ -207,7 +210,7 @@ int main()
       
     for(int i=0;i<200;i++)//2s
     {
-        LINK[0].p={0.0,((START-(WY/2))/2.0)*gene.t+(WY/2),ZC};//{0.0,0.02,0.385};
+        LINK[0].p={0.0,((START-((WY+DWY)/2))/2.0)*gene.t+((WY+DWY)/2),ZC};//{0.0,0.02,0.385};
         LINK[0].R<< 1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0;
         kine.InverseKinematics(LINK,linkref[0].p,linkref[0].R,tofrom,LINK[1].ID);
         kine.InverseKinematics(LINK,linkref[1].p,linkref[1].R,tofrom,LINK[8].ID);
@@ -440,43 +443,43 @@ void WPInit(walkingparameters wp[])
     wp[0].P=wp[0].Pref;//修正着地位置
     wp[0].S={0.0,0.0};//歩行パラメータ
     wp[0].Tsup=TSUP;//歩行周期
-    wp[0].Tdbl=0.24;//両足支持期
+    wp[0].Tdbl=TDBL;//両足支持期 0歩目は両足支持期は無し
 
     wp[1].S={0.0,WY};//歩行パラメータ
     wp[1].Tsup=TSUP;//歩行周期
-    wp[1].Tdbl=0.24;//両足支持期
+    wp[1].Tdbl=TDBL;//両足支持期
 
     wp[2].S={WX/2,WY};//歩行パラメータ
     wp[2].Tsup=TSUP;//歩行周期
-    wp[2].Tdbl=0.24;//両足支持期
+    wp[2].Tdbl=TDBL;//両足支持期
 
     wp[3].S={WX,WY};//歩行パラメータ
     wp[3].Tsup=TSUP;//歩行周期
-    wp[3].Tdbl=0.24;//両足支持期
+    wp[3].Tdbl=TDBL;//両足支持期
 
     wp[4].S={WX,WY};//歩行パラメータ
     wp[4].Tsup=TSUP;//歩行周期
-    wp[4].Tdbl=0.24;//両足支持期
+    wp[4].Tdbl=TDBL;//両足支持期
 
     wp[5].S={WX,WY};//歩行パラメータ
     wp[5].Tsup=TSUP;//歩行周期
-    wp[5].Tdbl=0.24;//両足支持期
+    wp[5].Tdbl=TDBL;//両足支持期
 
     wp[6].S={WX,WY};//歩行パラメータ
     wp[6].Tsup=TSUP;//歩行周期
-    wp[6].Tdbl=0.24;//両足支持期
+    wp[6].Tdbl=TDBL;//両足支持期
 
     wp[7].S={WX,WY};//歩行パラメータ
     wp[7].Tsup=TSUP;//歩行周期
-    wp[7].Tdbl=0.24;//両足支持期
+    wp[7].Tdbl=TDBL;//両足支持期
 
     wp[8].S={0.0,WY};//歩行パラメータ
     wp[8].Tsup=TSUP;//歩行周期
-    wp[8].Tdbl=0.24;//両足支持期
+    wp[8].Tdbl=TDBL;//両足支持期
 
     wp[9].S={0.0,WY};//歩行パラメータ
     wp[9].Tsup=TSUP;//歩行周期
-    wp[9].Tdbl=0.24;//両足支持期
+    wp[9].Tdbl=TDBL;//両足支持期
 /*
     wp[8].S={0.10,0.08};//歩行パラメータ
     wp[8].Tsup=1.0;//歩行周期
