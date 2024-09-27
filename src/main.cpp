@@ -20,19 +20,19 @@
 #define INIT_WAIT_SEC 2
 #define INTERVAL_SEC 0
 #define INTERVAL_MICROSEC 10000*DTNUM//*1.5//*2//10ms=10000μs
-#define NR_TIMER_INTERRUPTS 432//360//900//720//900//450//600//900//1625///2//625/2//1100/2//950/2//840/2//560//繰り返し回数 0.8*7 
+#define NR_TIMER_INTERRUPTS 360//468//360//432//360//900//720//900//450//600//900//1625///2//625/2//1100/2//950/2//840/2//560//繰り返し回数 0.8*7 
 
 static int remaining = NR_TIMER_INTERRUPTS;
 struct sigaction action, old_action;
 struct itimerval timer, old_timer;
 ///
 
-#define START 0.000095//0.000124//0.000133//0.000124//0.000114//0.000133//0.000124//0.000114//0.00016//0.00055//t=0.8//0.00016//t1.0//0.00021//0.000125//0.000035//0.00016//0.0001//0.000035//0.03//0.05//0.0004 0.0025 0.8 
-#define WX 0.0//0.05//0.1//0.15//0.10
-#define WY 0.05//0.07//0.06//0.065//0.105
-#define DWY 0.038 //両足支持期の増分
-#define TSUP 1.0//0.8//1.0
-#define TDBL 0.2
+#define START 0.00094//0.00081//0.000114
+#define WX 0.01
+#define WY 0.02
+#define DWY 0.045//0.043//0.037//0.049//0.039//0.0217//0.038 //両足支持期の増分
+#define TSUP 0.5
+#define TDBL 0.5//0.3
 
 #define TIMER
 #define TEST
@@ -108,20 +108,25 @@ int main()
     kine.CalcMass(LINK,robot);
     cout<<"Mass="<<robot.M<<endl;
 
-    LINK[0].p={0.0,(WY+DWY)/2,ZC};//{0.0,0.02,0.385};
+  //  LINK[0].p={0.0,(WY+DWY)/2,ZC};//{0.0,0.02,0.385};
     LINK[0].R<< 1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0;
 
     linkref[0].p={0.0,DWR,0.0};//右足{0.0,0.0,0.0}
     linkref[0].R<< 1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0;
-    linkref[1].p={0.0,WY+DWY+DWL,0.0};//右足{0.0,0.196,0.0}
+    linkref[1].p={0.0,WY+DWY+DWL,0.01};//右足{0.0,0.196,0.0}
     linkref[1].R<< 1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0;
 
     kine.InverseKinematics(LINK,linkref[0].p,linkref[0].R,tofrom,LINK[1].ID);
     kine.InverseKinematics(LINK,linkref[1].p,linkref[1].R,tofrom,LINK[8].ID);
 
-    kine.CalcCoG(LINK,robot);
+    robot.CoGref={0.0,-0.039+(WY+DWY)/2,ZC-DZC};
+    LINK[0].p=robot.CoGref;
+    cout<<"CoGref="<<robot.CoGref<<endl;
+
+    kine.ModiCoG(LINK,robot,linkref,tofrom);
 
     cout<<"CoG="<<robot.CoG<<endl;
+    cout<<"BODY="<<LINK[0].p<<endl;
 
 #else
 
@@ -185,7 +190,7 @@ int main()
     usleep(INITTIME );
 #else
        //////////////////////////////////
-    LINK[0].p={0.0,(WY+DWY)/2,ZC};//{0.0,0.02,0.385};
+   // LINK[0].p={0.0,(WY+DWY)/2,ZC};//{0.0,0.02,0.385};
     LINK[0].R<< 1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0;
 
     linkref[0].p={0.0,DWR,0.0};//右足{0.0,0.0,0.0}
@@ -193,8 +198,12 @@ int main()
     linkref[1].p={0.0,WY+DWY+DWL,0.0};//右足{0.0,0.196,0.0}
     linkref[1].R<< 1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0;
 
-    kine.InverseKinematics(LINK,linkref[0].p,linkref[0].R,tofrom,LINK[1].ID);
-    kine.InverseKinematics(LINK,linkref[1].p,linkref[1].R,tofrom,LINK[8].ID);
+    robot.CoGref={0.0,(WY+DWY)/2,ZC-DZC};
+    LINK[0].p=robot.CoGref;
+    kine.ModiCoG(LINK,robot,linkref,tofrom);
+
+ //   kine.InverseKinematics(LINK,linkref[0].p,linkref[0].R,tofrom,LINK[1].ID);
+ //   kine.InverseKinematics(LINK,linkref[1].p,linkref[1].R,tofrom,LINK[8].ID);
     
     for(int j=0;j<15;j++)
     {
@@ -208,14 +217,17 @@ int main()
     usleep( INITTIME );
     //////////////////////////////////
       
-    for(int i=0;i<200;i++)//2s
+    for(int i=0;i<80;i++)//2s
     {
-        LINK[0].p={0.0,((START-((WY+DWY)/2))/2.0)*gene.t+((WY+DWY)/2),ZC};//{0.0,0.02,0.385};
+      //  LINK[0].p={0.0,((START-((WY+DWY)/2))/2.0)*gene.t+((WY+DWY)/2),ZC};//{0.0,0.02,0.385};
         LINK[0].R<< 1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0;
-        kine.InverseKinematics(LINK,linkref[0].p,linkref[0].R,tofrom,LINK[1].ID);
-        kine.InverseKinematics(LINK,linkref[1].p,linkref[1].R,tofrom,LINK[8].ID);
+      //  kine.InverseKinematics(LINK,linkref[0].p,linkref[0].R,tofrom,LINK[1].ID);
+      //  kine.InverseKinematics(LINK,linkref[1].p,linkref[1].R,tofrom,LINK[8].ID);
+        robot.CoGref={0.0,((START-((WY+DWY)/2))/2.0)*gene.t+((WY+DWY)/2),ZC-DZC};
+        LINK[0].p=robot.CoGref;
+        kine.ModiCoG(LINK,robot,linkref,tofrom);
 
-        gene.t=gene.t+0.01;
+        gene.t=gene.t+0.025;
         for(int j=0;j<15;j++)
         {
             link_q[j][i]=LINK[j].q;
@@ -224,14 +236,14 @@ int main()
     }
     gene.t=0.0;
     cout<<"初期姿勢へ以降"<<endl;  
-    for(int i=0;i<100;i++)
+    for(int i=0;i<80;i++)
     {   
         RSInput(link_q,RS405CB,RS_serial,w_count);
         ECmotorInput(link_q,Arduino,Arduino2,w_count);
         XMInput(link_q,w_count);
         
         w_count++;    
-        usleep( 10000 );//10000000　
+        usleep( 25000 );//10000000　
     }  
     //////////////////////////////////
     WPInit(wp);
@@ -239,20 +251,22 @@ int main()
     for(int i=0;i<NR_TIMER_INTERRUPTS;i++)
     {
         #ifndef ONE_LEG
-        if(i<=60)
+        if(i<=75)//60
         {
-            gene.PatternGenerator(LINK,linkref,wp,linkref[0].p,linkref[1].p,numsteps);
-            kine.InverseKinematics(LINK,linkref[0].p,linkref[0].R,tofrom,LINK[1].ID);
-            kine.InverseKinematics(LINK,linkref[1].p,linkref[1].R,tofrom,LINK[8].ID);
+            gene.PatternGenerator(LINK,robot,linkref,wp,linkref[0].p,linkref[1].p,numsteps);
+            kine.ModiCoG(LINK,robot,linkref,tofrom);
+          //  kine.InverseKinematics(LINK,linkref[0].p,linkref[0].R,tofrom,LINK[1].ID);
+          //  kine.InverseKinematics(LINK,linkref[1].p,linkref[1].R,tofrom,LINK[8].ID);
 
         }
         #else
-        gene.PatternGenerator(LINK,linkref,wp,linkref[0].p,linkref[1].p,numsteps);
-        kine.InverseKinematics(LINK,linkref[0].p,linkref[0].R,tofrom,LINK[1].ID);
-        kine.InverseKinematics(LINK,linkref[1].p,linkref[1].R,tofrom,LINK[8].ID);
+        gene.PatternGenerator(LINK,robot,linkref,wp,linkref[0].p,linkref[1].p,numsteps);
+        kine.ModiCoG(LINK,robot,linkref,tofrom);
+        //kine.InverseKinematics(LINK,linkref[0].p,linkref[0].R,tofrom,LINK[1].ID);
+        //kine.InverseKinematics(LINK,linkref[1].p,linkref[1].R,tofrom,LINK[8].ID);
         #endif //ONE_LEG
 
-        datalog.logging(LINK,gene);
+        datalog.logging(LINK,robot,gene);
         datalog.logging_2(LINK,gene);
         for(int j=0;j<15;j++)
         {
@@ -336,102 +350,105 @@ void LinkInit(RobotLink LINK[], int linknum)
 
     LINK[0].a = {0.0, 0.0, 0.0};  //ルートリンク
     LINK[0].b = {0.0, 0.0, 0.0};
-    LINK[0].c_ ={0.0, 0.0, 0.0};
-    LINK[0].m=0.1;
+    LINK[0].c_ ={0.00775, 0.0, 0.062};//{0.0085, 0.001, 0.0945};//{0.00775, 0.0, 0.062};
+    LINK[0].m=0.318;//0.575;//0.318;
 
 /**/
     //右足
     LINK[1].parentID = 0;//右足ヨー
     LINK[1].a = {0.0, 0.0, 1.0};
-    LINK[1].b = {0.00, -0.03, 0.07};//重心の前後方向の位置を調節するならここ 0.085
+    //LINK[1].b = {0.00, -0.03, 0.07};//重心の前後方向の位置を調節するならここ 0.085
+    LINK[1].b = {0.00, -0.03, 0.0};//重心の前後方向の位置を調節するならここ 0.085
+
     LINK[1].c_ ={0.0, 0.0, 0.0};
-    LINK[1].m=0.2;
+    LINK[1].m=0.0;
 
     LINK[2].parentID = 1;//右足ロール
     LINK[2].a = {1.0, 0.0, 0.0};
     LINK[2].b = {0.00775, 0.0, 0.0};
-    LINK[2].c_ ={0.0, 0.0, 0.0};
-    LINK[2].m=0.3;
+    LINK[2].c_ ={-0.017, 0.0, -0.012};
+    LINK[2].m=0.201;
 
     LINK[3].parentID = 2;//右足ピッチ
     LINK[3].a = {0.0, 1.0, 0.0};
     LINK[3].b = {0.0, 0.0, 0.0};
-    LINK[3].c_ ={0.0, 0.0, 0.0};
-    LINK[3].m=0.4;
+    LINK[3].c_ ={-0.023, -0.061, -0.032};
+    LINK[3].m=0.311;
 
 
     LINK[4].parentID = 3;//右足直動
     LINK[4].a = {0.0, 0.0, 1.0};
     LINK[4].b = {0.0, 0.0, 0.0};
-    LINK[4].c_ ={0.0, 0.0, 0.0};
-    LINK[4].m=0.5;
+    LINK[4].c_ ={0.0065, -0.0445, -0.0927};
+    LINK[4].m=0.267;
 
 
     LINK[5].parentID = 4;//右足ピッチ
     LINK[5].a = {0.0, 1.0, 0.0};
     LINK[5].b = {0.0, 0.0, -0.3}; //-0.367//足リンクなし-0.382　重心高さ0.4m -0.327 重心高さ0.45m -0.367
-    LINK[5].c_ ={0.0, 0.0, 0.0};
-    LINK[5].m=0.6;
+    LINK[5].c_ ={-0.017, 0.0, 0.012};
+    LINK[5].m=0.201;
 
 
     LINK[6].parentID = 5;//右足ロール
     LINK[6].a = {1.0, 0.0, 0.0};
     LINK[6].b = {0.0, 0.0, 0.0};
-    LINK[6].c_ ={0.0, 0.0, 0.0};
-    LINK[6].m=0.7;
+    LINK[6].c_ ={0.0, -0.011, -0.0225};
+    LINK[6].m=0.069;
 
 
     LINK[7].parentID = 6;//右足先 仮想の回転関節だとする
     LINK[7].a = {0.0, 0.0, 0.0};
     LINK[7].b = {0.0, 0.0, -0.0265};
     LINK[7].c_ ={0.0, 0.0, 0.0};
-    LINK[7].m=0.8;
+    LINK[7].m=0.0;
 
 
     //左足
     LINK[8].parentID = 0;
     LINK[8].a = {0.0, 0.0, 1.0};
-    LINK[8].b = {0.00, 0.03, 0.07};
+//    LINK[8].b = {0.00, 0.03, 0.07};
+    LINK[8].b = {0.00, 0.03, 0.0};
     LINK[8].c_ ={0.0, 0.0, 0.0};
-    LINK[8].m=0.2;
+    LINK[8].m=0.0;
 
 
     LINK[9].parentID = 8;
     LINK[9].a = {1.0, 0.0, 0.0};
     LINK[9].b = {0.00775, 0.0, 0.0};
-    LINK[9].c_ ={0.0, 0.0, 0.0};
-    LINK[9].m=0.3;
+    LINK[9].c_ ={-0.017, 0.0, -0.012};
+    LINK[9].m=0.201;
 
 
     LINK[10].parentID = 9;
     LINK[10].a = {0.0, 1.0, 0.0};
     LINK[10].b = {0.0, 0.0, 0.0};
-    LINK[10].c_ ={0.0, 0.0, 0.0};
-    LINK[10].m=0.4;
+    LINK[10].c_ ={-0.023, 0.061, -0.032};
+    LINK[10].m=0.311;
 
     LINK[11].parentID = 10;
     LINK[11].a = {0.0, 0.0, 1.0};
     LINK[11].b = {0.0, 0.0, 0.0};
-    LINK[11].c_ ={0.0, 0.0, 0.0};
-    LINK[11].m=0.5;
+    LINK[11].c_ ={0.0065, 0.0445, -0.0927};
+    LINK[11].m=0.267;
 
     LINK[12].parentID = 11;
     LINK[12].a = {0.0, 1.0, 0.0};
     LINK[12].b = {0.0, 0.0, -0.3};
-    LINK[12].c_ ={0.0, 0.0, 0.0};
-    LINK[12].m=0.6;
+    LINK[12].c_ ={-0.017, 0.0, 0.012};
+    LINK[12].m=0.201;
 
     LINK[13].parentID = 12;
     LINK[13].a = {1.0, 0.0, 0.0};
     LINK[13].b = {0.0, 0.0, 0.0};
-    LINK[13].c_ ={0.0, 0.0, 0.0};
-    LINK[13].m=0.7;
+    LINK[13].c_ ={0.0, 0.011, -0.0225};
+    LINK[13].m=0.069;
 
     LINK[14].parentID = 13;//仮想の回転関節
     LINK[14].a = {0.0, 0.0, 0.0};
     LINK[14].b = {0.0, 0.0, -0.0265};
     LINK[14].c_ ={0.0, 0.0, 0.0};
-    LINK[14].m=0.8;
+    LINK[14].m=0.0;
 
 }
 

@@ -22,6 +22,7 @@ class Kinematics
 
         void CalcMass(RobotLink link[], Robot &robot); //全質量を計算
         void CalcCoG(RobotLink link[],Robot &robot); //重心位置を計算
+        void ModiCoG(RobotLink link[],Robot &robot,RobotLink linkref[], int tofrom);//重心収束計算
 
 };
 

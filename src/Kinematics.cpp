@@ -183,20 +183,75 @@ double Kinematics::err(Vector3d p, Vector3d w)
 
 void Kinematics::CalcMass(RobotLink link[], Robot &robot)
 {
+    double M=0.0;
+
     for(int i=0; i<LINKNUM; i++)
     {
-        robot.M+=link[i].m;
+        M+=link[i].m;
     }
+
+    robot.M=M;
 }
 
 void Kinematics::CalcCoG(RobotLink link[],Robot &robot)
 {
+    Vector3d M_cog={0.0,0.0,0.0};
+
+    CalcMass(link,robot);
+
     for(int i=0; i<LINKNUM; i++)//各リンクの絶対重心位置を算出
     {
         link[i].c=link[i].p+link[i].R*link[i].c_;
-        robot.M_cog+=link[i].m*link[i].c;
+        M_cog+=link[i].m*link[i].c;
     }
 
-    robot.CoG=robot.M_cog/robot.M; //重心位置算出
+    robot.M_cog=M_cog;
 
+    robot.CoG=robot.M_cog/robot.M; //重心位置算出
+}
+
+void Kinematics::ModiCoG(RobotLink link[],Robot &robot,RobotLink linkref[], int tofrom)
+{
+    Vector3d dC;
+    Vector3d dw={0.0,0.0,0.0};
+    double e = 1.0e-3;
+    double k = 1.0;
+
+    //Step1 目標足先位置・姿勢をもらう
+    for(int i=0;i<100;i++) //100回繰り返す
+    {
+        //Step2　逆運動学計算（両足）
+        InverseKinematics(link,linkref[0].p,linkref[0].R,tofrom,link[1].ID);//右脚
+        InverseKinematics(link,linkref[1].p,linkref[1].R,tofrom,link[8].ID);//左脚
+
+        //Step3 重心位置を計算
+        CalcCoG(link,robot);
+      //  cout<<"CoG="<<robot.CoG<<endl;
+        //Step4 差を取る
+        dC=robot.CoGref-robot.CoG;
+       // cout<<i<<"回目"<<endl;
+        //Step5 終了化否か
+        
+        // if(abs(dC(1)) < e)//err(dC,dw)<e
+        // {
+        //     break;
+        // }
+
+        if(err(dC,dw)<e)
+        {
+          //  cout<<"i="<<i<<endl;
+            break;
+        }
+
+        if(i==99)
+        {
+            cout<<"重心計算終わり"<<endl;
+        }
+
+        //Step6 ボディリンクに修正分を足す
+        link[0].p=link[0].p+k*dC;
+    //    link[0].p(1)=link[0].p(1)+k*dC(1);
+        //cout<<"BODY="<<link[0].p<<endl;
+    }
+    
 }

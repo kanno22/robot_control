@@ -35,6 +35,7 @@ RobotLink::RobotLink()
 Robot::Robot()
 {
         CoG={0.0, 0.0, 0.0};
+        CoGref={0.0, 0.0, 0.0};
         M_cog={0.0, 0.0, 0.0};
         M=0.0;
 }

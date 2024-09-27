@@ -8,10 +8,11 @@
 
 #include<iostream>
 
-#define ZC 0.250//0.235//0.235//0.215//0.165//0.33//0.4//0.45
+#define ZC 0.250//0.250
+#define DZC 0.0265// 
 #define DTNUM 2.5//1.0//2.0
-#define DWR 0.0//-0.005//-0.005//-0.01//-0.025//ZMPより足リンク位置は左右2.5cmほど外側に設定
-#define DWL 0.0//0.005//0.005//0.01//0.025//ZMPより足リンク位置は左右2.5cmほど外側に設定
+#define DWR -0.008//-0.01//-0.005//-0.005//-0.01//-0.025//ZMPより足リンク位置は左右2.5cmほど外側に設定
+#define DWL 0.008//0.01//0.005//0.005//0.01//0.025//ZMPより足リンク位置は左右2.5cmほど外側に設定
 
 
 using namespace Eigen;
@@ -64,7 +65,7 @@ class walkingpatterngenerator
         double t;
         walkingpatterngenerator();
         void PatternPlanner(walkingparameters wp[]);
-        void PatternGenerator(RobotLink link[],RobotLink linkref[],walkingparameters wp[],Vector3d Prefr,Vector3d Prefl,int numsteps);
+        void PatternGenerator(RobotLink link[],Robot &robot,RobotLink linkref[],walkingparameters wp[],Vector3d Prefr,Vector3d Prefl,int numsteps);
          int sign(int stepcount);
 };
 

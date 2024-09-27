@@ -21,7 +21,7 @@ class DataLog
         void log_init();
         void log2_init();
         void log3_init();
-        void logging(RobotLink link[],walkingpatterngenerator gene);
+        void logging(RobotLink link[],Robot robot,walkingpatterngenerator gene);
         void logging_2(RobotLink link[],walkingpatterngenerator gene);
         void logging_3(RobotLink link[]);
         

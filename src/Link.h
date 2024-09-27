@@ -37,6 +37,7 @@ class Robot
         Robot();
 
         Vector3d CoG;
+        Vector3d CoGref;
         Vector3d M_cog; //重心モーメント
         double M;
 

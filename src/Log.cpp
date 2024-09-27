@@ -8,9 +8,9 @@ void DataLog::log_init()
 
 }
 
-void DataLog::logging(RobotLink link[],walkingpatterngenerator gene)
+void DataLog::logging(RobotLink link[],Robot robot,walkingpatterngenerator gene)
 {
-    mylog<<gene.t<<"\t"<<link[0].p(0)<<"\t"<<link[0].p(1)<<"\t"<<link[0].p(2)<<"\t"<<link[6].p(0)<<"\t"<<link[6].p(1)<<"\t"<<link[6].p(2)<<"\t"<<link[13].p(0)<<"\t"<<link[13].p(1)<<"\t"<<link[13].p(2)<<"\t"<<link[0].v(0)<<"\t"<<link[0].v(1)<<endl;
+    mylog<<gene.t<<"\t"<<robot.CoG(0)<<"\t"<<robot.CoG(1)<<"\t"<<robot.CoG(2)<<"\t"<<link[6].p(0)<<"\t"<<link[6].p(1)<<"\t"<<link[6].p(2)<<"\t"<<link[13].p(0)<<"\t"<<link[13].p(1)<<"\t"<<link[13].p(2)<<"\t"<<link[0].v(0)<<"\t"<<link[0].v(1)<<endl;
 }
 
  void DataLog::log2_init()

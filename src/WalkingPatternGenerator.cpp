@@ -104,11 +104,23 @@ using namespace std;
         wp[stepcount+1].Cai = ((wp[stepcount+1].Cpi-wp[stepcount+1].P)/(Tc*Tc));  //n+1歩目の初期重心加速度としている
        // cout<<wp[stepcount+1].Cai<<endl;
 
-        a0=wp[stepcount].Cpf;
-        a1=wp[stepcount].Cvf;
-        a2=wp[stepcount].Caf/2;
-        a3=-(2*wp[stepcount].Caf+wp[stepcount+1].Cai)/(3*wp[stepcount].Tdbl);
-        a4=(wp[stepcount].Caf+wp[stepcount+1].Cai)/(4*wp[stepcount].Tdbl);
+        if(wp[stepcount].Tdbl>=0.001)
+        {
+            a0=wp[stepcount].Cpf;
+            a1=wp[stepcount].Cvf;
+            a2=wp[stepcount].Caf/2;
+            a3=-(2*wp[stepcount].Caf+wp[stepcount+1].Cai)/(3*wp[stepcount].Tdbl);
+            a4=(wp[stepcount].Caf+wp[stepcount+1].Cai)/(4*wp[stepcount].Tdbl);
+        }
+        else
+        {
+            a0={0.0,0.0};
+            a1={0.0,0.0};
+            a2={0.0,0.0};
+            a3={0.0,0.0};
+            a4={0.0,0.0};
+        }
+
         
         //両足指示期中の増加分の重心位置・接地位置
         wp[stepcount].dCp=a1*wp[stepcount].Tdbl+a2*wp[stepcount].Tdbl*wp[stepcount].Tdbl+a3*wp[stepcount].Tdbl*wp[stepcount].Tdbl*wp[stepcount].Tdbl+a4*wp[stepcount].Tdbl*wp[stepcount].Tdbl*wp[stepcount].Tdbl*wp[stepcount].Tdbl;
@@ -117,7 +129,7 @@ using namespace std;
         Csum=Csum+wp[stepcount].dCp;
     };
 
-    void walkingpatterngenerator::PatternGenerator(RobotLink link[],RobotLink linkref[],walkingparameters wp[],Vector3d Prefr,Vector3d Prefl,int numsteps)
+    void walkingpatterngenerator::PatternGenerator(RobotLink link[],Robot &robot,RobotLink linkref[],walkingparameters wp[],Vector3d Prefr,Vector3d Prefl,int numsteps)
     {
         //右足をn=0とする
 
@@ -138,10 +150,25 @@ using namespace std;
         }
         else if((tcount>=wp[stepcount].Tsup*(1/dt))&&(sup_dub==true))//両足支持に移行
         {
-            cout<<"両足支持期に移行"<<t<<endl;
-            t=0.0;//リセット
-            tcount=0;
-            sup_dub=false;//両足支持期に移行
+            if(wp[stepcount].Tdbl<=0.001)
+            {
+                cout<<"両足支持期無し"<<t<<endl;
+                t=0.0;//リセット
+                tcount=0;
+                stepcount++;
+                 //Step5~8
+                PatternPlanner(wp);
+                cout<<"\n"<<stepcount<<"回目"<<endl;
+                
+            }
+            else
+            {
+                cout<<"両足支持期に移行"<<t<<endl;
+                t=0.0;//リセット
+                tcount=0;
+                sup_dub=false;//両足支持期に移行
+
+            }
             
         }
         else if((tcount>=wp[stepcount].Tdbl*(1/dt))&&(sup_dub==false))//片足支持に移行 //n+1 //支持脚切り替えの瞬間だけ計算すればよい
@@ -162,7 +189,7 @@ using namespace std;
             tcount++;
         }
 
-        if(sup_dub==true)//片足支持期
+        if((sup_dub==true))//片足支持期
         {
             Cpref = (wp[stepcount].Cpi-wp[stepcount].P)*cosh(t/Tc)+Tc*wp[stepcount].Cvi*sinh(t/Tc)+wp[stepcount].P+(Csum-wp[stepcount].dCp);//n=0では修正着地位置=目標着地位置
             Cvref = ((wp[stepcount].Cpi-wp[stepcount].P)/Tc)*sinh(t/Tc)+wp[stepcount].Cvi*cosh(t/Tc);      
@@ -271,9 +298,14 @@ using namespace std;
             }
         }
         
-        link[0].p(0)=Cpref(0);
-        link[0].p(1)=Cpref(1);
-        link[0].p(2)=zc;
+        //link[0].p(0)=Cpref(0);
+        //link[0].p(1)=Cpref(1);
+        //link[0].p(2)=zc;
+
+        robot.CoGref(0)=Cpref(0);
+        robot.CoGref(1)=Cpref(1);
+        robot.CoGref(2)=zc-DZC;
+        link[0].p=robot.CoGref;
 
         link[0].v(0)=Cvref(0);
         link[0].v(1)=Cvref(1);
