@@ -95,6 +95,22 @@ set ylabel "Current [mA]"
 
 plot file3 using 4 title "L_C_roll_c" w l lw 2, file3 using 5 title "L_A_roll_c" w l lw 2
 
+set output "./fig/COG_BODY.png"
+set autoscale x
+set autoscale y
+set xlabel "x [m]"
+set ylabel "y [m]"
+
+plot file using 2:3 title "COG" w l lw 2,file using 5:6 title "R_ZMP" w l lw 2,file using 8:9 title "L_ZMP" w l lw 2,file using 13:14 title "BODY" w l lw 2
+
+set output "./fig/BODY.png"
+set autoscale x
+set autoscale y
+set xlabel "Time [sec]"
+set ylabel "position [m]"
+
+plot file using 13 title "BODY_x" w l lw 2, file using 14 title "BODY_y" w l lw 2, file using 15 title "BODY_z" w l lw 2
+
 # set autoscale x
 # set autoscale y
 # set y2tics

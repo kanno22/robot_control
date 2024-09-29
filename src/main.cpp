@@ -27,19 +27,20 @@ struct sigaction action, old_action;
 struct itimerval timer, old_timer;
 ///
 
-#define START 0.00094//0.00081//0.000114
+#define START 0.00081//0.00094//0.00081//0.000114
 #define WX 0.01
 #define WY 0.02
-#define DWY 0.045//0.043//0.037//0.049//0.039//0.0217//0.038 //両足支持期の増分
+#define DWY 0.045//0.042//0.045//0.043//0.037//0.049//0.039//0.0217//0.038 //両足支持期の増分
 #define TSUP 0.5
 #define TDBL 0.5//0.3
 
 #define TIMER
 #define TEST
 #define KINETEST
-//#define MEASURE
+#define MEASURE
 #define L_MEASURE
 #define ONE_LEG
+#define MOVE_TEST
 #define INITTIME 1000000//1s
 
 #define PPR 1024//512*2
@@ -156,37 +157,37 @@ int main()
     cout<<"XM_torque on"<<endl;
 
 #ifndef TEST
-    link_q[4][0]=0.02;
-    link_q[11][0]=-0.02;
+    link_q[4][0]=0.0;
+    link_q[11][0]=0.0;
     link_q[1][0]=0*(M_PI/1800);
     link_q[7][0]=-0*(M_PI/1800);
-    link_q[2][0]=0*(M_PI/180);//右股ロール
+    link_q[2][0]=10*(M_PI/180);//右股ロール
     link_q[3][0]=0*(M_PI/180);//右股ピッチ
     link_q[5][0]=0*(M_PI/180);//右足首ピッチ
-    link_q[6][0]=0*(M_PI/180);//右足首ロール
-    link_q[9][0]=0*(M_PI/180);//左股ロール
+    link_q[6][0]=10*(M_PI/180);//右足首ロール
+    link_q[9][0]=10*(M_PI/180);//左股ロール
     link_q[10][0]=0*(M_PI/180);//左股ピッチ
     link_q[12][0]=0*(M_PI/180);//右足首ピッチ
-    link_q[13][0]=0*(M_PI/180);//右足首ロール
+    link_q[13][0]=10*(M_PI/180);//右足首ロール
     ECmotorInput(link_q,Arduino,Arduino2,0);
-   // RSInput_init(link_q,RS405CB,RS_serial);
-   // XMInput_init(link_q);
-    usleep(INITTIME );
+    RSInput_init(link_q,RS405CB,RS_serial);
+    XMInput_init(link_q);
+    usleep(50000000 );
     link_q[4][0]=0.0;
     link_q[11][0]=0.0;
     link_q[1][0]=0*(M_PI/1800);
     link_q[7][0]=0*(M_PI/1800);
-    link_q[2][0]=0*(M_PI/180);//右股ロール
+    link_q[2][0]=-10*(M_PI/180);//右股ロール
     link_q[3][0]=0*(M_PI/180);//右股ピッチ
     link_q[5][0]=0*(M_PI/180);//右足首ピッチ
-    link_q[6][0]=0*(M_PI/180);//右足首ロール
-    link_q[9][0]=0*(M_PI/180);//左股ロール
+    link_q[6][0]=-10*(M_PI/180);//右足首ロール
+    link_q[9][0]=-10*(M_PI/180);//左股ロール
     link_q[10][0]=0*(M_PI/180);//左股ピッチ
     link_q[12][0]=0*(M_PI/180);//右足首ピッチ
-    link_q[13][0]=0*(M_PI/180);//右足首ロール
+    link_q[13][0]=-10*(M_PI/180);//右足首ロール
     ECmotorInput(link_q,Arduino,Arduino2,0);
-   // RSInput_init(link_q,RS405CB,RS_serial);
-   // XMInput_init(link_q);
+    RSInput_init(link_q,RS405CB,RS_serial);
+    XMInput_init(link_q);
     usleep(INITTIME );
 #else
        //////////////////////////////////
@@ -217,6 +218,68 @@ int main()
     usleep( INITTIME );
     //////////////////////////////////
       
+    #ifndef MOVE_TEST
+
+        for(int i=0;i<160;i++)//3s
+        {
+            LINK[0].R<< 1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0;
+
+            if(i<80)
+            {
+                linkref[0].p={0.0,0.0,0.0};//右足{0.0,0.0,0.0}
+                linkref[0].R<< 1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0;
+                linkref[1].p={0.0,0.1,0.0};//左足{0.0,0.196,0.0}
+                linkref[1].R<< 1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0;
+
+               // robot.CoGref={0.0,0.05,0.3};//左足へ
+                robot.CoGref={0.0,((0.1-((0.1)/2.0))/2.0)*gene.t+((0.1)/2.0),0.3};//右足へ
+                //robot.CoGref={0.0,((Right-((WY+DWY)/2))/2.0)*gene.t+((WY+DWY)/2),ZC-DZC+0.1};//左足へ
+                            }
+            else
+            {              
+                linkref[0].p={0.0,0.0,0.0};//右足{0.0,0.0,0.0}
+                linkref[0].R<< 1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0;
+                
+                linkref[1].p={0.0,0.1,0.0};//左足{0.0,0.196,0.0}
+                linkref[1].R<< 1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0;
+
+                robot.CoGref={0.0,0.1,0.3};//左足へ
+            }
+
+            LINK[0].p=robot.CoGref;
+            //kine.ModiCoG(LINK,robot,linkref,tofrom);
+            kine.InverseKinematics(LINK,linkref[0].p,linkref[0].R,tofrom,LINK[1].ID);
+            kine.InverseKinematics(LINK,linkref[1].p,linkref[1].R,tofrom,LINK[8].ID);
+            cout<<"BODY="<<LINK[0].p<<endl;
+            cout<<"COG="<<robot.CoGref<<endl;
+            cout<<"i="<<i<<endl;
+            cout<<"gene.t="<<gene.t<<endl;
+            cout<<"----"<<endl;
+
+            gene.t=gene.t+0.025;
+
+            datalog.logging(LINK,robot,gene);
+            datalog.logging_2(LINK,gene);
+            for(int j=0;j<15;j++)
+            {
+                link_q[j][i]=LINK[j].q;
+            }
+            
+        }
+        gene.t=0.0;
+        cout<<"動作テスト開始"<<endl;  
+        for(int i=0;i<160;i++)
+        {   
+            RSInput(link_q,RS405CB,RS_serial,w_count);
+            ECmotorInput(link_q,Arduino,Arduino2,w_count);
+            XMInput(link_q,w_count);
+            
+            w_count++;    
+            usleep( 25000 );//10000000　
+        }  
+        usleep( 50000000 );//25s
+    #else
+
     for(int i=0;i<80;i++)//2s
     {
       //  LINK[0].p={0.0,((START-((WY+DWY)/2))/2.0)*gene.t+((WY+DWY)/2),ZC};//{0.0,0.02,0.385};
@@ -251,7 +314,7 @@ int main()
     for(int i=0;i<NR_TIMER_INTERRUPTS;i++)
     {
         #ifndef ONE_LEG
-        if(i<=75)//60
+        if(i<=50)//50 90
         {
             gene.PatternGenerator(LINK,robot,linkref,wp,linkref[0].p,linkref[1].p,numsteps);
             kine.ModiCoG(LINK,robot,linkref,tofrom);
@@ -292,6 +355,8 @@ int main()
     //////////////////////////////////
     timer_close();
     #endif //TIMER
+
+    #endif //MOVE_TEST
 
 #endif //TEST
 
@@ -350,8 +415,8 @@ void LinkInit(RobotLink LINK[], int linknum)
 
     LINK[0].a = {0.0, 0.0, 0.0};  //ルートリンク
     LINK[0].b = {0.0, 0.0, 0.0};
-    LINK[0].c_ ={0.00775, 0.0, 0.062};//{0.0085, 0.001, 0.0945};//{0.00775, 0.0, 0.062};
-    LINK[0].m=0.318;//0.575;//0.318;
+    LINK[0].c_ ={0.00775, 0.0, 0.062};//{0.0085, 0.001, 0.0945};//
+    LINK[0].m=0.318;//0.575;//
 
 /**/
     //右足
@@ -618,7 +683,7 @@ void XMInput_init(double (&link_q)[15][NR_TIMER_INTERRUPTS])
    XM_serial.angle[1]=-1*link_q[3][0]*(180/M_PI);//右股ピッチ
    XM_serial.angle[2]=-2.0+link_q[5][0]*(180/M_PI);//右足首ピッチ
    XM_serial.angle[3]=link_q[6][0]*(180/M_PI);//右足首ロール
-   XM_serial.angle[4]=-1*link_q[9][0]*(180/M_PI);//左股ロール
+   XM_serial.angle[4]=-1.2+-1*link_q[9][0]*(180/M_PI);//左股ロール
    XM_serial.angle[5]=link_q[10][0]*(180/M_PI);//左股ピッチ
    XM_serial.angle[6]=-1*link_q[12][0]*(180/M_PI);//右足首ピッチ
    XM_serial.angle[7]=link_q[13][0]*(180/M_PI);//右足首ロール
@@ -633,7 +698,7 @@ void XMInput(double (&link_q)[15][NR_TIMER_INTERRUPTS],int w_count)
    XM_serial.angle[1]=-1*link_q[3][w_count]*(180/M_PI);//右股ピッチ
    XM_serial.angle[2]=-2.0+link_q[5][w_count]*(180/M_PI);//右足首ピッチ
    XM_serial.angle[3]=link_q[6][w_count]*(180/M_PI);//右足首ロール
-   XM_serial.angle[4]=-1*link_q[9][w_count]*(180/M_PI);//左股ロール
+   XM_serial.angle[4]=-1.2+-1*link_q[9][w_count]*(180/M_PI);//左股ロール
    XM_serial.angle[5]=link_q[10][w_count]*(180/M_PI);//左股ピッチ
    XM_serial.angle[6]=-1*link_q[12][w_count]*(180/M_PI);//右足首ピッチ
    XM_serial.angle[7]=link_q[13][w_count]*(180/M_PI);//右足首ロール
