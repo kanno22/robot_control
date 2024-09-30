@@ -85,15 +85,15 @@ set autoscale y
 set xlabel "Time [sec]"
 set ylabel "ref [deg]"
 
-plot file2 using 11 title "L_Linear_ref" w l lw 2, file3 using 3 title "L_Linear" w l lw 2
+# plot file2 using 11 title "L_Linear_ref" w l lw 2, file3 using 3 title "L_Linear" w l lw 2
 
-set output "./fig/Current.png"
-set autoscale x
-set autoscale y
-set xlabel "Time [sec]"
-set ylabel "Current [mA]"
+# set output "./fig/Current.png"
+# set autoscale x
+# set autoscale y
+# set xlabel "Time [sec]"
+# set ylabel "Current [mA]"
 
-plot file3 using 4 title "L_C_roll_c" w l lw 2, file3 using 5 title "L_A_roll_c" w l lw 2
+# plot file3 using 4 title "L_C_roll_c" w l lw 2, file3 using 5 title "L_A_roll_c" w l lw 2
 
 set output "./fig/COG_BODY.png"
 set autoscale x

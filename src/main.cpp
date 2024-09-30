@@ -28,7 +28,7 @@ struct itimerval timer, old_timer;
 ///
 
 #define START 0.00081//0.00094//0.00081//0.000114
-#define WX 0.01
+#define WX 0.0
 #define WY 0.02
 #define DWY 0.045//0.042//0.045//0.043//0.037//0.049//0.039//0.0217//0.038 //両足支持期の増分
 #define TSUP 0.5
@@ -280,7 +280,7 @@ int main()
         usleep( 50000000 );//25s
     #else
 
-    for(int i=0;i<80;i++)//2s
+    for(int i=0;i<80;i++)//2s 80
     {
       //  LINK[0].p={0.0,((START-((WY+DWY)/2))/2.0)*gene.t+((WY+DWY)/2),ZC};//{0.0,0.02,0.385};
         LINK[0].R<< 1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0;
@@ -290,7 +290,7 @@ int main()
         LINK[0].p=robot.CoGref;
         kine.ModiCoG(LINK,robot,linkref,tofrom);
 
-        gene.t=gene.t+0.025;
+        gene.t=gene.t+0.01*DTNUM;
         for(int j=0;j<15;j++)
         {
             link_q[j][i]=LINK[j].q;
@@ -415,8 +415,8 @@ void LinkInit(RobotLink LINK[], int linknum)
 
     LINK[0].a = {0.0, 0.0, 0.0};  //ルートリンク
     LINK[0].b = {0.0, 0.0, 0.0};
-    LINK[0].c_ ={0.00775, 0.0, 0.062};//{0.0085, 0.001, 0.0945};//
-    LINK[0].m=0.318;//0.575;//
+    LINK[0].c_ ={0.0085, 0.001, 0.0987};//{0.00775, 0.0, 0.062};//{0.0085, 0.001, 0.0945};//
+    LINK[0].m=0.575;//;//0.318;//0.575;//
 
 /**/
     //右足
@@ -524,42 +524,52 @@ void WPInit(walkingparameters wp[])
     wp[0].Pref={0.0,0.0};//目標着地位置
     wp[0].P=wp[0].Pref;//修正着地位置
     wp[0].S={0.0,0.0};//歩行パラメータ
+    wp[0].Sz=0.0;//足上げ高さ
     wp[0].Tsup=TSUP;//歩行周期
     wp[0].Tdbl=TDBL;//両足支持期 0歩目は両足支持期は無し
 
     wp[1].S={0.0,WY};//歩行パラメータ
+    wp[1].Sz=0.0;//足上げ高さ
     wp[1].Tsup=TSUP;//歩行周期
     wp[1].Tdbl=TDBL;//両足支持期
 
-    wp[2].S={WX/2,WY};//歩行パラメータ
+    wp[2].S={WX/4,WY};//歩行パラメータ
+    wp[2].Sz=0.008;//足上げ高さ
     wp[2].Tsup=TSUP;//歩行周期
     wp[2].Tdbl=TDBL;//両足支持期
 
-    wp[3].S={WX,WY};//歩行パラメータ
+    wp[3].S={WX/2,WY};//歩行パラメータ
+    wp[3].Sz=0.008;//足上げ高さ
     wp[3].Tsup=TSUP;//歩行周期
     wp[3].Tdbl=TDBL;//両足支持期
 
     wp[4].S={WX,WY};//歩行パラメータ
+    wp[4].Sz=0.008;//足上げ高さ
     wp[4].Tsup=TSUP;//歩行周期
     wp[4].Tdbl=TDBL;//両足支持期
 
     wp[5].S={WX,WY};//歩行パラメータ
+    wp[5].Sz=0.008;//足上げ高さ
     wp[5].Tsup=TSUP;//歩行周期
     wp[5].Tdbl=TDBL;//両足支持期
 
     wp[6].S={WX,WY};//歩行パラメータ
+    wp[6].Sz=0.008;//足上げ高さ
     wp[6].Tsup=TSUP;//歩行周期
     wp[6].Tdbl=TDBL;//両足支持期
 
     wp[7].S={WX,WY};//歩行パラメータ
+    wp[7].Sz=0.008;//足上げ高さ
     wp[7].Tsup=TSUP;//歩行周期
     wp[7].Tdbl=TDBL;//両足支持期
 
     wp[8].S={0.0,WY};//歩行パラメータ
+    wp[8].Sz=0.008;//足上げ高さ
     wp[8].Tsup=TSUP;//歩行周期
     wp[8].Tdbl=TDBL;//両足支持期
 
     wp[9].S={0.0,WY};//歩行パラメータ
+    wp[9].Sz=0.0;//足上げ高さ
     wp[9].Tsup=TSUP;//歩行周期
     wp[9].Tdbl=TDBL;//両足支持期
 /*
@@ -683,7 +693,7 @@ void XMInput_init(double (&link_q)[15][NR_TIMER_INTERRUPTS])
    XM_serial.angle[1]=-1*link_q[3][0]*(180/M_PI);//右股ピッチ
    XM_serial.angle[2]=-2.0+link_q[5][0]*(180/M_PI);//右足首ピッチ
    XM_serial.angle[3]=link_q[6][0]*(180/M_PI);//右足首ロール
-   XM_serial.angle[4]=-1.2+-1*link_q[9][0]*(180/M_PI);//左股ロール
+   XM_serial.angle[4]=-1.5+-1*link_q[9][0]*(180/M_PI);//左股ロール
    XM_serial.angle[5]=link_q[10][0]*(180/M_PI);//左股ピッチ
    XM_serial.angle[6]=-1*link_q[12][0]*(180/M_PI);//右足首ピッチ
    XM_serial.angle[7]=link_q[13][0]*(180/M_PI);//右足首ロール
@@ -698,7 +708,7 @@ void XMInput(double (&link_q)[15][NR_TIMER_INTERRUPTS],int w_count)
    XM_serial.angle[1]=-1*link_q[3][w_count]*(180/M_PI);//右股ピッチ
    XM_serial.angle[2]=-2.0+link_q[5][w_count]*(180/M_PI);//右足首ピッチ
    XM_serial.angle[3]=link_q[6][w_count]*(180/M_PI);//右足首ロール
-   XM_serial.angle[4]=-1.2+-1*link_q[9][w_count]*(180/M_PI);//左股ロール
+   XM_serial.angle[4]=-1.5+-1*link_q[9][w_count]*(180/M_PI);//左股ロール
    XM_serial.angle[5]=link_q[10][w_count]*(180/M_PI);//左股ピッチ
    XM_serial.angle[6]=-1*link_q[12][w_count]*(180/M_PI);//右足首ピッチ
    XM_serial.angle[7]=link_q[13][w_count]*(180/M_PI);//右足首ロール

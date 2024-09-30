@@ -19,6 +19,7 @@ walkingparameters::walkingparameters()
         P={0.0,0.0};//修正着地位置
 
         S={0.0,0.0};//歩行パラメータ
+        Sz=0.0;
 
         Tsup=0.0;//歩行周期
         Tdbl=0.0;//両足支持期

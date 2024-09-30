@@ -26,6 +26,7 @@ class walkingparameters
         Vector2d P;//修正着地位置
 
         Vector2d S;//歩行パラメータ
+        double Sz;//足上げ高さ
 
         double Tsup;//歩行周期
         double Tdbl;//両足支持期

@@ -232,7 +232,8 @@ using namespace std;
 
                     prefl(0)=wp[stepcount-1].P(0)+(Csum(0)-wp[stepcount].dCp(0)-wp[stepcount-1].dCp(0))+Rx*(w*t-sin(w*t));//遊脚脚
                     prefl(1)=wp[stepcount-1].P(1)+(Csum(1)-wp[stepcount].dCp(1)-wp[stepcount-1].dCp(1))+Ry*(w*t-sin(w*t));  
-                    prefl(2)=Rz*(1-cos(w*t));
+                    //prefl(2)=Rz*(1-cos(w*t));
+                    prefl(2)=wp[stepcount].Sz*(1-cos(w*t));
                 }
 
             }
@@ -250,7 +251,8 @@ using namespace std;
                
                 prefr(0)=wp[stepcount-1].P(0)+(Csum(0)-wp[stepcount].dCp(0)-wp[stepcount-1].dCp(0))+Rx*(w*t-sin(w*t));//遊脚脚
                 prefr(1)=wp[stepcount-1].P(1)+(Csum(1)-wp[stepcount].dCp(1)-wp[stepcount-1].dCp(1))+Ry*(w*t-sin(w*t));
-                prefr(2)=Rz*(1-cos(w*t));
+                //prefr(2)=Rz*(1-cos(w*t));
+                prefr(2)=wp[stepcount].Sz*(1-cos(w*t));
 
             }  
         }
