@@ -54,8 +54,8 @@ void loop()
   { 
         
     serial_write();
-    
-    Receive=false;
+    //print挟んで確認
+    //Receive=false;
          
   }
   
@@ -133,7 +133,7 @@ void serial_read()
   
   if(Serial.available() >0)
   {
-     Receive_flag = Serial.parseFloat();
+     Receive_flag = Serial.parseInt();
      Receive=true;
     
     while(Serial.available() > 0)
@@ -147,8 +147,8 @@ void serial_read()
 
 void serial_write()
 {
-  Serial.print(imu.acc_x);
-  Serial.print(imu.acc_y);
+  Serial.println(imu.acc_x);
+  Serial.println(imu.acc_y);
   Serial.println(imu.acc_z);
   /*
   Serial.print(imu.yaw*(180/PI));

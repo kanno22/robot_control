@@ -29,18 +29,33 @@ void DataLog::logging(RobotLink link[],Robot robot,walkingpatterngenerator gene)
 
 }
 
- void DataLog::log3_init()
+ void DataLog::log_sensor_init()
  {
-    mylog3.open(FILE_NAME_3,std::ios::trunc);//上書きモード
-
-   // mylog2<<"time\t"<<"Rleg_l\t"<<"Lleg_l\t"<<endl;
-   mylog3<<"L_C_roll\t"<<"L_A_roll\t"<<"L_Linear\t"<<"L_C_roll_c\t"<<"L_A_roll_c\t"<<endl;
+    mylog_s.open(FILE_NAME_S,std::ios::trunc);//上書きモード
+//（変位）左股ロール・ピッチ、左直動、左足首ピッチ・ロール、右股ロール・ピッチ、右直動、右足首ピッチ・ロール、（電流）左股ロール・ピッチ、左足首ピッチ・ロール、右股ロール・ピッチ、右足首ピッチ・ロール
+   mylog_s<<"L_C_roll_angle\t"<<"L_C_pitch_angle\t"<<"L_linear_dis\t"<<"L_A_pitch_angle\t"<<"L_A_roll_angle\t"<<"R_C_roll_angle\t"<<"R_C_pitch_angle\t"<<"R_linear_dis\t"<<"R_A_pitch_angle\t"<<"R_A_roll_angle\t"<<"L_C_roll_current\t"<<"L_C_pitch_current\t"<<"L_A_pitch_current\t"<<"L_A_roll_current\t"<<"R_C_roll_current\t"<<"R_C_pitch_current\t"<<"R_A_pitch_current\t"<<"R_A_roll_current\t"<<endl;
 
  }
 
- void DataLog::logging_3(RobotLink link[])
+ void DataLog::logging_sensor(double (&link_get_q)[15][DATANUM],double (&link_get_c)[15][DATANUM],int w_count)
 {
    // mylog2<<gene.t<<"\t"<<link[4].q<<"\t"<<link[11].q<<endl;
-    mylog3<<link[9].get_q<<"\t"<<link[13].get_q<<"\t"<<link[11].get_q<<"\t"<<link[9].get_c<<"\t"<<link[13].get_c<<"\t"<<endl;
+    mylog_s<<link_get_q[2][w_count]*(180/M_PI)<<"\t"<<link_get_q[3][w_count]*(180/M_PI)<<"\t"<<link_get_q[4][w_count]<<"\t"<<link_get_q[5][w_count]*(180/M_PI)<<"\t"<<link_get_q[6][w_count]*(180/M_PI)<<"\t"<<link_get_q[9][w_count]*(180/M_PI)<<"\t"<<link_get_q[10][w_count]*(180/M_PI)<<"\t"<<link_get_q[11][w_count]<<"\t"<<link_get_q[12][w_count]*(180/M_PI)<<"\t"<<link_get_q[13][w_count]*(180/M_PI)<<"\t"<<link_get_c[2][w_count]<<"\t"<<link_get_c[3][w_count]<<"\t"<<link_get_c[5][w_count]<<"\t"<<link_get_c[6][w_count]<<"\t"<<link_get_c[9][w_count]<<"\t"<<link_get_c[10][w_count]<<"\t"<<link_get_c[12][w_count]<<"\t"<<link_get_c[13][w_count]<<"\t"<<endl;
 
 }
+
+//  void DataLog::log3_init()
+//  {
+//     mylog3.open(FILE_NAME_3,std::ios::trunc);//上書きモード
+
+//    // mylog2<<"time\t"<<"Rleg_l\t"<<"Lleg_l\t"<<endl;
+//    mylog3<<"L_C_roll\t"<<"L_A_roll\t"<<"L_Linear\t"<<"L_C_roll_c\t"<<"L_A_roll_c\t"<<endl;
+
+//  }
+
+//  void DataLog::logging_3(RobotLink link[])
+// {
+//    // mylog2<<gene.t<<"\t"<<link[4].q<<"\t"<<link[11].q<<endl;
+//     mylog3<<link[9].get_q<<"\t"<<link[13].get_q<<"\t"<<link[11].get_q<<"\t"<<link[9].get_c<<"\t"<<link[13].get_c<<"\t"<<endl;
+
+// }

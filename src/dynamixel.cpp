@@ -115,3 +115,14 @@ void Dynamixel::get_current()
   }
 
 }
+
+void Dynamixel::get_currents()
+{
+  if(dev != 0)
+  {
+    if(setop != 0)
+    {
+      DXL_GetPresentCurrents(dev,ids,current_g,ID_NUMBER);
+    }
+  }
+}

@@ -10,8 +10,12 @@
 #include <termios.h>
 #include <unistd.h>
 
+#include <vector>
+#include <sstream>
+
 #define SERIAL_PORT "/dev/ttyACM0"
 #define SERIAL_PORT_2 "/dev/ttyACM1"
+#define SERIAL_PORT_S "/dev/ttyUSB1"
 
 
 using namespace std;
@@ -23,6 +27,10 @@ class serial
         termios old_settings_;
         termios current_settings_;
         int fd;
+
+        char buffer[256];
+        string dataBuffer = "";
+
 
     public:
         enum BaudRate 
@@ -38,7 +46,8 @@ class serial
         virtual ~serial();
         bool s_open(const BaudRate &baudrate,const char *port);
         bool s_write(const string &str);
-        string s_read(const bool wait=true, const char terminate='\0');
+        void s_read(vector<float> &sense_data);
+        vector<float> parseData(const string& data);
         void s_close();
 };
 

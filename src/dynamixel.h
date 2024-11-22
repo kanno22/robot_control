@@ -34,6 +34,7 @@ class Dynamixel
     void get_angle();
     void get_angles();
     void get_current();
+    void get_currents();
     
 };
 

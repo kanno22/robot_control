@@ -27,23 +27,21 @@ struct sigaction action, old_action;
 struct itimerval timer, old_timer;
 ///
 
-#define START 0.00081//0.00094//0.00081//0.000114
-#define WX 0.0
+#define START 0.00081//0.00079//
+#define WX 0.0//0.033
 #define WY 0.02
-#define DWY 0.045//0.042//0.045//0.043//0.037//0.049//0.039//0.0217//0.038 //両足支持期の増分
+#define DWY 0.045//0.0465//両足支持期の増分
 #define TSUP 0.5
 #define TDBL 0.5//0.3
 
 #define TIMER
 #define TEST
 #define KINETEST
-#define MEASURE
-#define L_MEASURE
 #define ONE_LEG
 #define MOVE_TEST
 #define INITTIME 1000000//1s
 
-#define PPR 1024//512*2
+#define PPR 2048
 #define PINION_RADIUS 0.0112//[m]
 
 
@@ -62,6 +60,9 @@ void ECmotorInput(double (&link_q)[15][NR_TIMER_INTERRUPTS],serial& Arduino,seri
 void XMInput_init(double (&link_q)[15][NR_TIMER_INTERRUPTS]);
 void XMInput(double (&link_q)[15][NR_TIMER_INTERRUPTS],int w_count);
 
+void Flag_send();
+void Data_sense(int w_count);//センサ値取得
+
 void timer_init();
 void timer_close();
 void timer_handler(int signam);//タイマに呼び出される関数
@@ -76,13 +77,16 @@ double calcTime();//時間計測
     double link_get_q[15][NR_TIMER_INTERRUPTS];//取得した関節変位を格納する配列
     double link_get_c[15][NR_TIMER_INTERRUPTS];//取得した電流を格納する配列
     string linear_get_q[NR_TIMER_INTERRUPTS];
-    
+    string ddx[NR_TIMER_INTERRUPTS];//取得した生の加速度を格納する配列
+    string ddy[NR_TIMER_INTERRUPTS];//取得した生の加速度を格納する配列
+    string ddz[NR_TIMER_INTERRUPTS];//取得した生の加速度を格納する配列
+    vector<float> arduino_sense_data;//arduino nanoから送られてきたIMU、エンコーダの値を格納する配列
 
     Kinematics kine;
     walkingparameters wp[18];//numpsteps
     walkingpatterngenerator gene;
 
-    serial Arduino,Arduino2;
+    serial Arduino,Arduino2,Arduino_s;
     Servo_data RS405CB[RSNUM];
     Servo_serial RS_serial;
     Dynamixel XM_serial;
@@ -131,24 +135,26 @@ int main()
 
 #else
 
-    RSInit(RS405CB);
+    //RSInit(RS405CB);
 
     datalog.log_init();
     datalog.log2_init();
-    datalog.log3_init();
+    datalog.log_sensor_init();
     //////////////////////////////////
     
     Arduino.s_open(serial::kB115200,SERIAL_PORT);
     Arduino2.s_open(serial::kB115200,SERIAL_PORT_2);
-    RS_serial.rs_open();
+    Arduino_s.s_open(serial::kB115200,SERIAL_PORT_S);
+    //RS_serial.rs_open();
     XM_serial.open();
 
+    /*
     for(int i=0;i<RSNUM;i++)
     {
         RS405CB[i].tq_mode=1;
         RS_serial.rs_torque(RS405CB[i]);
         cout<<"RS_torque on"<<endl;
-    }
+    }*/
 
     XM_serial.set_OperatingModes();
     XM_serial.set_DriveModes();
@@ -170,9 +176,9 @@ int main()
     link_q[12][0]=0*(M_PI/180);//右足首ピッチ
     link_q[13][0]=10*(M_PI/180);//右足首ロール
     ECmotorInput(link_q,Arduino,Arduino2,0);
-    RSInput_init(link_q,RS405CB,RS_serial);
+    //RSInput_init(link_q,RS405CB,RS_serial);
     XMInput_init(link_q);
-    usleep(50000000 );
+    usleep(INITTIME);
     link_q[4][0]=0.0;
     link_q[11][0]=0.0;
     link_q[1][0]=0*(M_PI/1800);
@@ -186,7 +192,7 @@ int main()
     link_q[12][0]=0*(M_PI/180);//右足首ピッチ
     link_q[13][0]=-10*(M_PI/180);//右足首ロール
     ECmotorInput(link_q,Arduino,Arduino2,0);
-    RSInput_init(link_q,RS405CB,RS_serial);
+    //RSInput_init(link_q,RS405CB,RS_serial);
     XMInput_init(link_q);
     usleep(INITTIME );
 #else
@@ -212,7 +218,7 @@ int main()
     } 
     w_count=0;//初期姿勢
     cout<<"直立姿勢"<<endl;  
-    RSInput_init(link_q,RS405CB,RS_serial);
+    //RSInput_init(link_q,RS405CB,RS_serial);
     ECmotorInput(link_q,Arduino,Arduino2,w_count);
     XMInput_init(link_q);
     usleep( INITTIME );
@@ -270,7 +276,7 @@ int main()
         cout<<"動作テスト開始"<<endl;  
         for(int i=0;i<160;i++)
         {   
-            RSInput(link_q,RS405CB,RS_serial,w_count);
+            //RSInput(link_q,RS405CB,RS_serial,w_count);
             ECmotorInput(link_q,Arduino,Arduino2,w_count);
             XMInput(link_q,w_count);
             
@@ -301,7 +307,7 @@ int main()
     cout<<"初期姿勢へ以降"<<endl;  
     for(int i=0;i<80;i++)
     {   
-        RSInput(link_q,RS405CB,RS_serial,w_count);
+        //RSInput(link_q,RS405CB,RS_serial,w_count);
         ECmotorInput(link_q,Arduino,Arduino2,w_count);
         XMInput(link_q,w_count);
         
@@ -338,13 +344,14 @@ int main()
     }
 
     w_count=0;//初期姿勢
-    cout<<"0歩目遊脚移動"<<endl;  
-    RSInput_init(link_q,RS405CB,RS_serial);
+    cout<<"0歩目_遊脚移動"<<endl;  
+    //RSInput_init(link_q,RS405CB,RS_serial);
     ECmotorInput(link_q,Arduino,Arduino2,w_count);
     XMInput_init(link_q);
     usleep( INITTIME );
 
-    cout<<"歩行開始"<<endl;
+    cout<<"歩行_開始"<<endl;
+    Flag_send();//IMU、エンコーダ値を要求(0.5s間待機)
     #ifdef TIMER
     timer_init();
     while(remaining>0)
@@ -360,43 +367,25 @@ int main()
 
 #endif //TEST
 
-    for(int i=0;i<RSNUM;i++)
-    {
-        RS405CB[i].tq_mode=0;
-        RS_serial.rs_torque(RS405CB[i]);
-        cout<<"torque off"<<endl;
-    }
+    // for(int i=0;i<RSNUM;i++)
+    // {
+    //     RS405CB[i].tq_mode=0;
+    //     RS_serial.rs_torque(RS405CB[i]);
+    //     cout<<"torque off"<<endl;
+    // }
     XM_serial.torque_enables(false);
     XM_serial.set_LEDs(false);
 
     XM_serial.close();
-   RS_serial.rs_close();
+    //RS_serial.rs_close();
+    Arduino_s.s_close();
     Arduino2.s_close();
     Arduino.s_close();
-
-    #ifndef MEASURE
+    
     for(int i=0;i<NR_TIMER_INTERRUPTS;i++)
     {
-       LINK[9].get_q=link_get_q[9][i];//左股ロール[deg]
-       LINK[13].get_q=link_get_q[13][i];//左足首ロール[deg]
-       LINK[9].get_c=link_get_c[9][i];//左股ロール[mA]
-       LINK[13].get_c=link_get_c[13][i];//左足首ロール[mA]
-
-        datalog.logging_3(LINK);
+      datalog.logging_sensor(link_get_q,link_get_c,i);
     }
-
-    #endif //MEASURE
-
-    #ifndef L_MEASURE
-    for(int i=0;i<NR_TIMER_INTERRUPTS;i++)
-    {
-       link_get_q[11][i]=(stod(linear_get_q[i])/PPR)*2*M_PI*PINION_RADIUS;
-       LINK[11].get_q=link_get_q[11][i];//左直動
-        
-        datalog.logging_3(LINK);
-    }
-
-    #endif //L_MEASURE
     
    //////////////////////////////////
 #endif //KINETEST
@@ -533,17 +522,17 @@ void WPInit(walkingparameters wp[])
     wp[1].Tsup=TSUP;//歩行周期
     wp[1].Tdbl=TDBL;//両足支持期
 
-    wp[2].S={WX/4,WY};//歩行パラメータ
+    wp[2].S={0.0,WY};//歩行パラメータ
     wp[2].Sz=0.008;//足上げ高さ
     wp[2].Tsup=TSUP;//歩行周期
     wp[2].Tdbl=TDBL;//両足支持期
 
-    wp[3].S={WX/2,WY};//歩行パラメータ
+    wp[3].S={WX/4,WY};//歩行パラメータ
     wp[3].Sz=0.008;//足上げ高さ
     wp[3].Tsup=TSUP;//歩行周期
     wp[3].Tdbl=TDBL;//両足支持期
 
-    wp[4].S={WX,WY};//歩行パラメータ
+    wp[4].S={WX/2,WY};//歩行パラメータ
     wp[4].Sz=0.008;//足上げ高さ
     wp[4].Tsup=TSUP;//歩行周期
     wp[4].Tdbl=TDBL;//両足支持期
@@ -558,7 +547,7 @@ void WPInit(walkingparameters wp[])
     wp[6].Tsup=TSUP;//歩行周期
     wp[6].Tdbl=TDBL;//両足支持期
 
-    wp[7].S={WX,WY};//歩行パラメータ
+    wp[7].S={WX/2,WY};//歩行パラメータ
     wp[7].Sz=0.008;//足上げ高さ
     wp[7].Tsup=TSUP;//歩行周期
     wp[7].Tdbl=TDBL;//両足支持期
@@ -674,15 +663,6 @@ void ECmotorInput(double (&link_q)[15][NR_TIMER_INTERRUPTS],serial& Arduino,seri
       cout << "Send Error"  << endl;
     }
 
-    #ifndef L_MEASURE
-    //link_get_q[11][w_count]=(stod(Arduino.s_read())/PPR)*2*M_PI*PINION_RADIUS;
-    //cout<<"受け取り"<<link_get_q[11][w_count]<<"[m]"<<endl;
-    linear_get_q[w_count]=Arduino.s_read();
-    cout<<"受け取り"<<linear_get_q[w_count]<<"[m]"<<endl;
-    #endif
-
-    
-
 }
 
 void XMInput_init(double (&link_q)[15][NR_TIMER_INTERRUPTS])
@@ -715,20 +695,55 @@ void XMInput(double (&link_q)[15][NR_TIMER_INTERRUPTS],int w_count)
 
    XM_serial.dt=0.01*DTNUM;//*1.5;//*2;//10ms
    
-   XM_serial.angle_time_writes2();
-
-   #ifndef MEASURE
-   XM_serial.get_angle();
-   XM_serial.get_current();
-   link_get_q[9][w_count]=-1*XM_serial.angle_g[4];
-   link_get_q[13][w_count]=XM_serial.angle_g[7];
-   link_get_c[9][w_count]=-XM_serial.current_g[4];
-   link_get_c[13][w_count]=XM_serial.current_g[7];
-   
-   #endif
+   XM_serial.angle_time_writes2();//目標値送信
 
 }
 
+//sense
+void Data_sense(int w_count)
+{
+   //dynamixelのデータ取得
+   XM_serial.get_angles();
+   XM_serial.get_currents();
+   //IMU、直動部エンコーダの値取得
+   Arduino_s.s_read(arduino_sense_data);
+
+   link_get_q[2][w_count]=-1*XM_serial.angle_g[0]*(M_PI/180);//右股ロール
+   link_get_q[3][w_count]=-1*XM_serial.angle_g[1]*(M_PI/180);//右股ピッチ
+   link_get_q[4][w_count]=-1*(arduino_sense_data[1]/PPR)*2*M_PI*PINION_RADIUS;//右足直動
+   link_get_q[5][w_count]=(-2.0+XM_serial.angle_g[2])*(M_PI/180);//右足首ピッチ
+   link_get_q[6][w_count]=XM_serial.angle_g[3]*(M_PI/180);//右足首ロール
+   link_get_q[9][w_count]=(-1.5+-1*XM_serial.angle_g[4])*(M_PI/180);//左股ロール
+   link_get_q[10][w_count]=XM_serial.angle_g[5]*(M_PI/180);//左股ピッチ
+   link_get_q[11][w_count]=(arduino_sense_data[2]/PPR)*2*M_PI*PINION_RADIUS;//左足直動-
+   link_get_q[12][w_count]=-1*XM_serial.angle_g[6]*(M_PI/180);//右足首ピッチ
+   link_get_q[13][w_count]=XM_serial.angle_g[7]*(M_PI/180);//右足首ロール
+   //
+   link_get_c[2][w_count]=XM_serial.current_g[0];//右股ロール
+   link_get_c[3][w_count]=XM_serial.current_g[1];//右股ピッチ
+   link_get_c[5][w_count]=XM_serial.current_g[2];//右足首ピッチ
+   link_get_c[6][w_count]=XM_serial.current_g[3];//右足首ロール
+   link_get_c[9][w_count]=XM_serial.current_g[4];//左股ロール
+   link_get_c[10][w_count]=XM_serial.current_g[5];//左股ピッチ
+   link_get_c[12][w_count]=XM_serial.current_g[6];//右足首ピッチ
+   link_get_c[13][w_count]=XM_serial.current_g[7];//右足首ロール
+}
+
+void Flag_send()
+{
+    string Send_flag="1";
+
+    if (Arduino_s.s_write(Send_flag)) 
+    {
+      cout << "Send : " << Send_flag << endl;
+    } 
+    else 
+    {
+      cout << "Send Error"  << endl;
+    }  
+
+    usleep(500000);
+}
 
 //timer
 void timer_handler(int signam)
@@ -750,9 +765,10 @@ void timer_handler(int signam)
     cout<<dt<<"ms"<<endl;
     oldt=t;
     
-    RSInput(link_q,RS405CB,RS_serial,w_count);
+    //RSInput(link_q,RS405CB,RS_serial,w_count);
     ECmotorInput(link_q,Arduino,Arduino2,w_count);
     XMInput(link_q,w_count);
+    Data_sense(w_count);
     
     w_count++;
 

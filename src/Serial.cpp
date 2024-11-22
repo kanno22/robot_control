@@ -70,36 +70,54 @@ bool serial::s_write(const string &str)
   return write(fd, send_char, send_size) == send_size;
 }
 
-string serial::s_read(const bool wait, const char terminate) 
+void serial::s_read(vector<float> &sense_data)
 {
-  string receive_str;
-  bool receving = false;
-  char receive_char;
+        int bytesRead = read(fd, buffer, sizeof(buffer) - 1);  // データを読み取る
+        if (bytesRead > 0)
+         {
+            buffer[bytesRead] = '\0';  // 文字列の終端を設定
+            dataBuffer += buffer;      // 受信したデータをバッファに追加
 
-  while (true) 
-  {
-    int read_size = read(fd, &receive_char, 1);
+            // 改行で区切られた行ごとに処理する
+            size_t pos;
+            while ((pos = dataBuffer.find('\n')) != string::npos) 
+            {
+                string line = dataBuffer.substr(0, pos);
+                dataBuffer.erase(0, pos + 1);
 
-    if (read_size > 0) 
-    {
-      receving = true;
-      receive_str.append(1, receive_char);
-      if (receive_char == terminate) 
-      {
-        break;
-      }
-    } 
-    else 
-    {
-      if (!wait || receving) 
-      {
-        break;
-      }
-    }
-  }
-  return receive_str;
+                // データを解析して浮動小数点数値に分割
+                vector<float> sensorValues = parseData(line);
+
+                // 解析されたセンサー値を出力
+                cout << "Sensor values: ";
+                for (float value : sensorValues) {
+                    cout << value << " ";
+                }
+                cout << endl;
+                sense_data=sensorValues;
+            }
+        }  
 }
 
+// 受信したデータをカンマで区切り、浮動小数点数値としてベクトルに変換する関数
+vector<float> serial::parseData(const string& data) 
+{
+    vector<float> values;
+    stringstream ss(data);
+    string item;
+    while (getline(ss, item, ',')) 
+    {
+        try 
+        {
+            values.push_back(stof(item));  // 文字列を浮動小数点に変換してベクトルに格納
+        } 
+        catch (const invalid_argument& e) 
+        {
+            cerr << "Invalid data: " << item << endl;
+        }
+    }
+    return values;
+}
 void serial::s_close()
 {
     close(fd);  
