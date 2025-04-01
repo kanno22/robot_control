@@ -4,13 +4,13 @@ void DataLog::log_init()
 {
     mylog.open(FILE_NAME,std::ios::trunc);//上書きモード
 
-    mylog<<"time\t"<<"COG_x\t"<<"COG_y\t"<<"COG_z\t"<<"Pr_x\t"<<"Pr_y\t"<<"Pr_z\t"<<"Pl_x\t"<<"Pl_y\t"<<"Pl_z\t"<<"COG_Vx\t"<<"COG_Vy\t"<<"BODY_x\t"<<"BODY_y\t"<<"BODY_z\t"<<endl;
+    mylog<<"time\t"<<"COG_x\t"<<"COG_y\t"<<"COG_z\t"<<"Pr_x\t"<<"Pr_y\t"<<"Pr_z\t"<<"Pl_x\t"<<"Pl_y\t"<<"Pl_z\t"<<"BODY_x\t"<<"BODY_y\t"<<"BODY_z\t"<<"BODY_vx\t"<<"BODY_vy\t"<<"BODY_vz\t"<<"BODY_ax\t"<<"BODY_ay\t"<<"BODY_az\t"<<"COG_vx\t"<<"COG_vy\t"<<"COG_vz\t"<<"COG_ax\t"<<"COG_ay\t"<<"COG_az\t"<<endl;
 
 }
 
 void DataLog::logging(RobotLink link[],Robot robot,walkingpatterngenerator gene)
 {
-    mylog<<gene.t<<"\t"<<robot.CoG(0)<<"\t"<<robot.CoG(1)<<"\t"<<robot.CoG(2)<<"\t"<<link[6].p(0)<<"\t"<<link[6].p(1)<<"\t"<<link[6].p(2)<<"\t"<<link[13].p(0)<<"\t"<<link[13].p(1)<<"\t"<<link[13].p(2)<<"\t"<<link[0].v(0)<<"\t"<<link[0].v(1)<<"\t"<<link[0].p(0)<<"\t"<<link[0].p(1)<<"\t"<<link[0].p(2)<<endl;
+    mylog<<gene.t<<"\t"<<robot.CoG(0)<<"\t"<<robot.CoG(1)-DWR<<"\t"<<robot.CoG(2)<<"\t"<<link[6].p(0)<<"\t"<<link[6].p(1)-DWR<<"\t"<<link[6].p(2)<<"\t"<<link[13].p(0)<<"\t"<<link[13].p(1)-DWR<<"\t"<<link[13].p(2)<<"\t"<<link[0].p(0)<<"\t"<<link[0].p(1)-DWR<<"\t"<<link[0].p(2)<<"\t"<<link[0].v(0)<<"\t"<<link[0].v(1)<<"\t"<<link[0].v(2)<<"\t"<<link[0].acc(0)<<"\t"<<link[0].acc(1)<<"\t"<<link[0].acc(2)<<"\t"<<robot.dCoGref(0)<<"\t"<<robot.dCoGref(1)<<"\t"<<robot.dCoGref(2)<<"\t"<<robot.ddCoGref(0)<<"\t"<<robot.ddCoGref(1)<<"\t"<<robot.ddCoGref(2)<<"\t"<<endl;
 }
 
  void DataLog::log2_init()
@@ -44,7 +44,20 @@ void DataLog::logging(RobotLink link[],Robot robot,walkingpatterngenerator gene)
 
 }
 
-//  void DataLog::log3_init()
+void DataLog::log_cog_init()
+{
+    mylog_cog.open(FILE_NAME_C,std::ios::trunc);//上書きモード
+
+    mylog_cog<<"time\t"<<"COG_x\t"<<"COG_y\t"<<"COG_z\t"<<"COG_xx\t"<<"COG_yy\t"<<"COG_zz\t"<<"p_x\t"<<"p_y\t"<<"p_z\t"<<"BODY_x\t"<<"BODY_y\t"<<"BODY_z\t"<<"BODY_vx\t"<<"BODY_vy\t"<<"BODY_vz\t"<<"BODY_ax\t"<<"BODY_ay\t"<<"BODY_az\t"<<"COG_vx\t"<<"COG_vy\t"<<"COG_vz\t"<<"COG_ax\t"<<"COG_ay\t"<<"COG_az\t"<<endl;
+
+}
+
+void DataLog::logging_cog(RobotLink link[],Robot robot,double t)
+{
+    mylog_cog<<t<<"\t"<<robot.CoG_O_GND[1](0)<<"\t"<<robot.CoG_O_GND[1](1)<<"\t"<<robot.CoG_O_GND[1](2)<<"\t"<<robot.CoG_gnd(0)<<"\t"<<robot.CoG_gnd(1)<<"\t"<<robot.CoG_gnd(2)<<"\t"<<robot.p_O_GND(0)<<"\t"<<robot.p_O_GND(1)<<"\t"<<robot.p_O_GND(2)<<"\t"<<robot.p_body_GND[1](0)<<"\t"<<robot.p_body_GND[1](1)<<"\t"<<robot.p_body_GND[1](2)<<"\t"<<robot.dp_body_GND[1](0)<<"\t"<<robot.dp_body_GND[1](1)<<"\t"<<robot.dp_body_GND[1](2)<<"\t"<<robot.ddp_body_GND(0)<<"\t"<<robot.ddp_body_GND(1)<<"\t"<<robot.ddp_body_GND(2)<<"\t"<<robot.dCoG_O_GND[1](0)<<"\t"<<robot.dCoG_O_GND[1](1)<<"\t"<<robot.dCoG_O_GND[1](2)<<"\t"<<robot.ddCoG_O_GND(0)<<"\t"<<robot.ddCoG_O_GND(1)<<"\t"<<robot.ddCoG_O_GND(2)<<"\t"<<robot.dCoG_O_GND[0](0)<<"\t"<<robot.dCoG_O_GND[0](1)<<"\t"<<robot.dCoG_O_GND[0](2)<<"\t"<<endl;
+}
+
+//  void DataLog::log3_init()1
 //  {
 //     mylog3.open(FILE_NAME_3,std::ios::trunc);//上書きモード
 

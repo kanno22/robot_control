@@ -5,7 +5,7 @@ CXXFLAGS= -std=c++11 $(CFLAGS)
 
 SUFFIX = .cpp
 SRCDIR = ./src
-SRCS = main.cpp Link.cpp Kinematics.cpp WalkingParameters.cpp WalkingPatternGenerator.cpp Serial.cpp RSservo.cpp Log.cpp dynamixel.cpp dx2lib.cpp dx2lib_intuitive.cpp dxmisc.cpp
+SRCS = main.cpp Link.cpp Kinematics.cpp WalkingParameters.cpp WalkingPatternGenerator.cpp Serial.cpp RSservo.cpp Log.cpp dynamixel.cpp dx2lib.cpp dx2lib_intuitive.cpp dxmisc.cpp State_estimation.cpp
 
 OBJDIR = ./obj
 OBJS = $(addprefix $(OBJDIR)/, $(addsuffix .o, $(basename $(SRCS))))

@@ -1,6 +1,7 @@
 
 #include "Kinematics.h"
-#include "WalkingPatternGenerator.h"
+#include "State_estimation.h"
+
 #include "Serial.h"
 #include "RSservo.h"
 #include "dynamixel.h"
@@ -28,7 +29,7 @@ struct itimerval timer, old_timer;
 ///
 
 #define START 0.00081//0.00079//
-#define WX 0.0//0.033
+#define WX 0.0//0.015//0.033
 #define WY 0.02
 #define DWY 0.045//0.0465//両足支持期の増分
 #define TSUP 0.5
@@ -62,6 +63,7 @@ void XMInput(double (&link_q)[15][NR_TIMER_INTERRUPTS],int w_count);
 
 void Flag_send();
 void Data_sense(int w_count);//センサ値取得
+void State_estimate();
 
 void timer_init();
 void timer_close();
@@ -83,6 +85,7 @@ double calcTime();//時間計測
     vector<float> arduino_sense_data;//arduino nanoから送られてきたIMU、エンコーダの値を格納する配列
 
     Kinematics kine;
+    State_estimation state;
     walkingparameters wp[18];//numpsteps
     walkingpatterngenerator gene;
 
@@ -103,6 +106,10 @@ double calcTime();//時間計測
     int t;
     int oldt;
     int dt;
+    //目標ボディ速度・加速度算出用
+    Vector3d p_body_old;
+    Vector3d dp_body_old;
+    Vector3d ddp_body_old;
     //////////////////////////////////
 
 int main()
@@ -121,10 +128,10 @@ int main()
     linkref[1].p={0.0,WY+DWY+DWL,0.01};//右足{0.0,0.196,0.0}
     linkref[1].R<< 1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0;
 
-    kine.InverseKinematics(LINK,linkref[0].p,linkref[0].R,tofrom,LINK[1].ID);
-    kine.InverseKinematics(LINK,linkref[1].p,linkref[1].R,tofrom,LINK[8].ID);
+  // kine.InverseKinematics(LINK,linkref[0].p,linkref[0].R,tofrom,LINK[1].ID);
+   // kine.InverseKinematics(LINK,linkref[1].p,linkref[1].R,tofrom,LINK[8].ID);
 
-    robot.CoGref={0.0,-0.039+(WY+DWY)/2,ZC-DZC};
+    robot.CoGref={0.0,0.0325,ZC-DZC};
     LINK[0].p=robot.CoGref;
     cout<<"CoGref="<<robot.CoGref<<endl;
 
@@ -133,6 +140,18 @@ int main()
     cout<<"CoG="<<robot.CoG<<endl;
     cout<<"BODY="<<LINK[0].p<<endl;
 
+    for(int i=0; i<LINKNUM; i++)//
+    {
+        LINK[i].get_q=LINK[i].q;
+    }
+    cout<<"test="<<LINK[6].p-LINK[0].p<<endl;
+    cout<<"P_="<<LINK[6].p<<endl;
+    state.Centroid_estimation(LINK,robot);
+    cout<<"P_GND="<<LINK[6].p_self<<endl;
+    cout<<"C_self="<<robot.CoG_self<<endl;
+    cout<<"P_GND_test="<<robot.p_s_gnd<<endl;
+    cout<<"CoG_gnd="<<robot.CoG_gnd<<endl;
+    cout<<"p_g_self="<<robot.p_g_self<<endl;
 #else
 
     //RSInit(RS405CB);
@@ -140,6 +159,7 @@ int main()
     datalog.log_init();
     datalog.log2_init();
     datalog.log_sensor_init();
+    datalog.log_cog_init();
     //////////////////////////////////
     
     Arduino.s_open(serial::kB115200,SERIAL_PORT);
@@ -331,12 +351,47 @@ int main()
         #else
         gene.PatternGenerator(LINK,robot,linkref,wp,linkref[0].p,linkref[1].p,numsteps);
         kine.ModiCoG(LINK,robot,linkref,tofrom);
+        //目標ボディ速度・加速度算出
+
+        if(i==0)
+        {
+            p_body_old=LINK[0].p;
+            dp_body_old={0.0,0.0,0.0};
+            ddp_body_old={0.0,0.0,0.0};
+        }
+
+        if(gene.t==0.0)
+        {
+          LINK[0].v=dp_body_old;
+          LINK[0].acc=ddp_body_old;
+        }
+        else
+        {
+          LINK[0].v=(LINK[0].p-p_body_old)/(0.01*DTNUM);
+          LINK[0].acc=(LINK[0].v-dp_body_old)/(0.01*DTNUM);
+        }
+
+        p_body_old=LINK[0].p;
+        dp_body_old=LINK[0].v;
+        ddp_body_old=LINK[0].acc;
+        //
         //kine.InverseKinematics(LINK,linkref[0].p,linkref[0].R,tofrom,LINK[1].ID);
         //kine.InverseKinematics(LINK,linkref[1].p,linkref[1].R,tofrom,LINK[8].ID);
+        
+        ////
+        /*
+        for(int i=0; i<LINKNUM; i++)//
+        {
+            LINK[i].get_q=LINK[i].q;
+        }
+        State_estimate();*/
+        /////
+        
         #endif //ONE_LEG
 
         datalog.logging(LINK,robot,gene);
         datalog.logging_2(LINK,gene);
+        //datalog.logging_cog(LINK,robot,state.t);
         for(int j=0;j<15;j++)
         {
             link_q[j][i]=LINK[j].q;
@@ -382,10 +437,16 @@ int main()
     Arduino2.s_close();
     Arduino.s_close();
     
-    for(int i=0;i<NR_TIMER_INTERRUPTS;i++)
-    {
-      datalog.logging_sensor(link_get_q,link_get_c,i);
-    }
+     for(int i=0;i<NR_TIMER_INTERRUPTS;i++)
+     {
+        for(int j=0; j<LINKNUM; j++)//
+        {
+            LINK[j].get_q=link_get_q[j][i];
+        }
+       State_estimate();
+       datalog.logging_cog(LINK,robot,state.t);
+       datalog.logging_sensor(link_get_q,link_get_c,i);
+     }
     
    //////////////////////////////////
 #endif //KINETEST
@@ -523,42 +584,42 @@ void WPInit(walkingparameters wp[])
     wp[1].Tdbl=TDBL;//両足支持期
 
     wp[2].S={0.0,WY};//歩行パラメータ
-    wp[2].Sz=0.008;//足上げ高さ
+    wp[2].Sz=0.0;//0.008;//足上げ高さ
     wp[2].Tsup=TSUP;//歩行周期
     wp[2].Tdbl=TDBL;//両足支持期
 
     wp[3].S={WX/4,WY};//歩行パラメータ
-    wp[3].Sz=0.008;//足上げ高さ
+    wp[3].Sz=0.0;//0.008;//足上げ高さ
     wp[3].Tsup=TSUP;//歩行周期
     wp[3].Tdbl=TDBL;//両足支持期
 
     wp[4].S={WX/2,WY};//歩行パラメータ
-    wp[4].Sz=0.008;//足上げ高さ
+    wp[4].Sz=0.0;//0.008;//足上げ高さ
     wp[4].Tsup=TSUP;//歩行周期
     wp[4].Tdbl=TDBL;//両足支持期
 
     wp[5].S={WX,WY};//歩行パラメータ
-    wp[5].Sz=0.008;//足上げ高さ
+    wp[5].Sz=0.0;//0.008;//足上げ高さ
     wp[5].Tsup=TSUP;//歩行周期
     wp[5].Tdbl=TDBL;//両足支持期
 
     wp[6].S={WX,WY};//歩行パラメータ
-    wp[6].Sz=0.008;//足上げ高さ
+    wp[6].Sz=0.0;//0.008;//足上げ高さ
     wp[6].Tsup=TSUP;//歩行周期
     wp[6].Tdbl=TDBL;//両足支持期
 
     wp[7].S={WX/2,WY};//歩行パラメータ
-    wp[7].Sz=0.008;//足上げ高さ
+    wp[7].Sz=0.0;//0.008;//足上げ高さ
     wp[7].Tsup=TSUP;//歩行周期
     wp[7].Tdbl=TDBL;//両足支持期
 
     wp[8].S={0.0,WY};//歩行パラメータ
-    wp[8].Sz=0.008;//足上げ高さ
+    wp[8].Sz=0.0;//0.008;//足上げ高さ
     wp[8].Tsup=TSUP;//歩行周期
     wp[8].Tdbl=TDBL;//両足支持期
 
     wp[9].S={0.0,WY};//歩行パラメータ
-    wp[9].Sz=0.0;//足上げ高さ
+    wp[9].Sz=0.0;//0.0;//足上げ高さ
     wp[9].Tsup=TSUP;//歩行周期
     wp[9].Tdbl=TDBL;//両足支持期
 /*
@@ -711,9 +772,9 @@ void Data_sense(int w_count)
    link_get_q[2][w_count]=-1*XM_serial.angle_g[0]*(M_PI/180);//右股ロール
    link_get_q[3][w_count]=-1*XM_serial.angle_g[1]*(M_PI/180);//右股ピッチ
    link_get_q[4][w_count]=-1*(arduino_sense_data[1]/PPR)*2*M_PI*PINION_RADIUS;//右足直動
-   link_get_q[5][w_count]=(-2.0+XM_serial.angle_g[2])*(M_PI/180);//右足首ピッチ
+   link_get_q[5][w_count]=(2.0+XM_serial.angle_g[2])*(M_PI/180);//右足首ピッチ
    link_get_q[6][w_count]=XM_serial.angle_g[3]*(M_PI/180);//右足首ロール
-   link_get_q[9][w_count]=(-1.5+-1*XM_serial.angle_g[4])*(M_PI/180);//左股ロール
+   link_get_q[9][w_count]=(-1.5-1*XM_serial.angle_g[4])*(M_PI/180);//左股ロール
    link_get_q[10][w_count]=XM_serial.angle_g[5]*(M_PI/180);//左股ピッチ
    link_get_q[11][w_count]=(arduino_sense_data[2]/PPR)*2*M_PI*PINION_RADIUS;//左足直動-
    link_get_q[12][w_count]=-1*XM_serial.angle_g[6]*(M_PI/180);//右足首ピッチ
@@ -743,6 +804,74 @@ void Flag_send()
     }  
 
     usleep(500000);
+}
+
+void State_estimate()
+{
+        if((state.stepcount==0)&&(state.tcount==0)&&(state.sup_dub==true))//n=1の着地位置を算出 定常歩行stepcount==2
+        {
+            state.switching=0;
+            state.sup_dub=true;//片足支持
+
+            state.Centroid_estimation(LINK,robot);
+            state.tcount++;
+ 
+            cout<<"センシング_歩行開始"<<endl;
+
+        }
+        else if((state.tcount>=wp[state.stepcount].Tsup*(1/state.dt))&&(state.sup_dub==true))//両足支持に移行
+        {
+            if(wp[state.stepcount].Tdbl<=0.001)
+            {
+                if(state.sign()==1)//右足支持
+                {
+                    state.switching=1;
+                }
+                else
+                {
+                    state.switching=2;
+                }
+                state.Centroid_estimation(LINK,robot);
+                state.tcount=0;
+                state.stepcount++;
+                
+            }
+            else
+            {
+                state.Centroid_estimation(LINK,robot);
+                state.tcount=0;
+                state.sup_dub=false;//両足支持期に移行
+                 cout<<"センシング_両足支持期に移行"<<endl;
+
+            }
+            
+        }
+        else if((state.tcount>=wp[state.stepcount].Tdbl*(1/state.dt))&&(state.sup_dub==false))//片足支持に移行 //n+1 //支持脚切り替えの瞬間だけ計算すればよい
+        {
+            if(state.sign()==1)//右足支持
+            {
+                state.switching=1;
+            }
+            else
+            {
+                state.switching=2;
+            }
+            state.Centroid_estimation(LINK,robot);
+            state.tcount=0;
+            state.stepcount++;
+            state.sup_dub=true;//片足支持に移行
+            state.switching=0;
+            cout<<"センシング_片足支持に移行"<<endl;
+
+        }
+        else
+        {
+            state.Centroid_estimation(LINK,robot);
+            state.tcount++;
+            cout<<"センシング_定常"<<endl;
+        }
+
+        state.t+=state.dt;
 }
 
 //timer

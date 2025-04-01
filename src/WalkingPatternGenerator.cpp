@@ -51,7 +51,7 @@ using namespace std;
 
         Rx=0.0;
         Ry=0.0;
-        Rz=0.008;//0.01;//0.002;//0.04;//4cm足を上げる
+        Rz=0.008;//0.01;//0.002;//0.04;//もう使ってない
         w=0.0;
     };
 
@@ -309,13 +309,20 @@ using namespace std;
         robot.CoGref(2)=zc-DZC;
         link[0].p=robot.CoGref;
 
-        link[0].v(0)=Cvref(0);
-        link[0].v(1)=Cvref(1);
-        link[0].v(2)=0.0;
+        robot.dCoGref(0)=Cvref(0);
+        robot.dCoGref(1)=Cvref(1);
+        robot.dCoGref(2)=0.0;
 
-        link[0].a(0)=Caref(0);
-        link[0].a(1)=Caref(1);
-        link[0].a(2)=0.0;
+        robot.ddCoGref(0)=Caref(0);
+        robot.ddCoGref(1)=Caref(1);
+        robot.ddCoGref(2)=0.0;
+        //link[0].v(0)=Cvref(0);
+        //link[0].v(1)=Cvref(1);
+        //link[0].v(2)=0.0;
+
+        //link[0].a(0)=Caref(0);
+        //link[0].a(1)=Caref(1);
+        //link[0].a(2)=0.0;
 
 
         linkref[0].p=prefr+dprefr;
