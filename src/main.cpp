@@ -3,7 +3,6 @@
 #include "State_estimation.h"
 
 #include "Serial.h"
-#include "RSservo.h"
 #include "dynamixel.h"
 #include"Log.h"
 
@@ -21,19 +20,20 @@
 #define INIT_WAIT_SEC 2
 #define INTERVAL_SEC 0
 #define INTERVAL_MICROSEC 10000*DTNUM//*1.5//*2//10ms=10000μs
-#define NR_TIMER_INTERRUPTS 360//468//360//432//360//900//720//900//450//600//900//1625///2//625/2//1100/2//950/2//840/2//560//繰り返し回数 0.8*7 
+#define NR_TIMER_INTERRUPTS 396//360//468//360//432//360//900//720//900//450//600//900//1625///2//625/2//1100/2//950/2//840/2//560//繰り返し回数 0.8*7 
 
 static int remaining = NR_TIMER_INTERRUPTS;
 struct sigaction action, old_action;
 struct itimerval timer, old_timer;
 ///
 
-#define START 0.00081//0.00079//
+#define START 0.00089//0.00081//0.00079//
 #define WX 0.0//0.015//0.033
 #define WY 0.02
-#define DWY 0.045//0.0465//両足支持期の増分
+#define F_h 0.01//0.008
+#define DWY 0.056//0.058//0.045//0.0465//両足支持期の増分
 #define TSUP 0.5
-#define TDBL 0.5//0.3
+#define TDBL 0.6//0.3
 
 #define TIMER
 #define TEST
@@ -47,16 +47,11 @@ struct itimerval timer, old_timer;
 
 
 ///
-#define RSNUM 2
-
 using namespace Eigen;
 using namespace std;
 
 void LinkInit(RobotLink LINK[], int linknum);
-void RSInit(Servo_data RS405CB[]);
 void WPInit(walkingparameters wp[]);
-void RSInput_init(double (&link_q)[15][NR_TIMER_INTERRUPTS],Servo_data RS405CB[],Servo_serial& RS_serial);
-void RSInput(double (&link_q)[15][NR_TIMER_INTERRUPTS],Servo_data RS405CB[],Servo_serial& RS_serial,int w_count);
 void ECmotorInput(double (&link_q)[15][NR_TIMER_INTERRUPTS],serial& Arduino,serial& Arduino2,int w_count);
 void XMInput_init(double (&link_q)[15][NR_TIMER_INTERRUPTS]);
 void XMInput(double (&link_q)[15][NR_TIMER_INTERRUPTS],int w_count);
@@ -90,8 +85,6 @@ double calcTime();//時間計測
     walkingpatterngenerator gene;
 
     serial Arduino,Arduino2,Arduino_s;
-    Servo_data RS405CB[RSNUM];
-    Servo_serial RS_serial;
     Dynamixel XM_serial;
 
     DataLog datalog;
@@ -131,11 +124,13 @@ int main()
   // kine.InverseKinematics(LINK,linkref[0].p,linkref[0].R,tofrom,LINK[1].ID);
    // kine.InverseKinematics(LINK,linkref[1].p,linkref[1].R,tofrom,LINK[8].ID);
 
-    robot.CoGref={0.0,0.0325,ZC-DZC};
+    robot.CoGref={0.0,(WY+DWY)/2,0.25-0.0325};//ZC-DZC
     LINK[0].p=robot.CoGref;
     cout<<"CoGref="<<robot.CoGref<<endl;
 
-    kine.ModiCoG(LINK,robot,linkref,tofrom);
+   kine.ModiCoG(LINK,robot,linkref,tofrom);
+   //kine.CalcCoG(LINK,robot);
+
 
     cout<<"CoG="<<robot.CoG<<endl;
     cout<<"BODY="<<LINK[0].p<<endl;
@@ -146,15 +141,14 @@ int main()
     }
     cout<<"test="<<LINK[6].p-LINK[0].p<<endl;
     cout<<"P_="<<LINK[6].p<<endl;
-    state.Centroid_estimation(LINK,robot);
-    cout<<"P_GND="<<LINK[6].p_self<<endl;
-    cout<<"C_self="<<robot.CoG_self<<endl;
-    cout<<"P_GND_test="<<robot.p_s_gnd<<endl;
-    cout<<"CoG_gnd="<<robot.CoG_gnd<<endl;
-    cout<<"p_g_self="<<robot.p_g_self<<endl;
+    cout<<"LINK[4].q="<<LINK[4].q<<endl;
+    // state.Centroid_estimation(LINK,robot);
+    // cout<<"P_GND="<<LINK[6].p_self<<endl;
+    // cout<<"C_self="<<robot.CoG_self<<endl;
+    // cout<<"P_GND_test="<<robot.p_s_gnd<<endl;
+    // cout<<"CoG_gnd="<<robot.CoG_gnd<<endl;
+    // cout<<"p_g_self="<<robot.p_g_self<<endl;
 #else
-
-    //RSInit(RS405CB);
 
     datalog.log_init();
     datalog.log2_init();
@@ -165,17 +159,8 @@ int main()
     Arduino.s_open(serial::kB115200,SERIAL_PORT);
     Arduino2.s_open(serial::kB115200,SERIAL_PORT_2);
     Arduino_s.s_open(serial::kB115200,SERIAL_PORT_S);
-    //RS_serial.rs_open();
+ 
     XM_serial.open();
-
-    /*
-    for(int i=0;i<RSNUM;i++)
-    {
-        RS405CB[i].tq_mode=1;
-        RS_serial.rs_torque(RS405CB[i]);
-        cout<<"RS_torque on"<<endl;
-    }*/
-
     XM_serial.set_OperatingModes();
     XM_serial.set_DriveModes();
     XM_serial.set_LEDs(true);
@@ -186,38 +171,35 @@ int main()
     link_q[4][0]=0.0;
     link_q[11][0]=0.0;
     link_q[1][0]=0*(M_PI/1800);
-    link_q[7][0]=-0*(M_PI/1800);
-    link_q[2][0]=10*(M_PI/180);//右股ロール
+    link_q[7][0]=0*(M_PI/1800);
+    link_q[2][0]=0*(M_PI/180);//右股ロール
     link_q[3][0]=0*(M_PI/180);//右股ピッチ
     link_q[5][0]=0*(M_PI/180);//右足首ピッチ
-    link_q[6][0]=10*(M_PI/180);//右足首ロール
-    link_q[9][0]=10*(M_PI/180);//左股ロール
+    link_q[6][0]=0*(M_PI/180);//右足首ロール
+    link_q[9][0]=0*(M_PI/180);//左股ロール
     link_q[10][0]=0*(M_PI/180);//左股ピッチ
     link_q[12][0]=0*(M_PI/180);//右足首ピッチ
-    link_q[13][0]=10*(M_PI/180);//右足首ロール
+    link_q[13][0]=0*(M_PI/180);//右足首ロール
     ECmotorInput(link_q,Arduino,Arduino2,0);
-    //RSInput_init(link_q,RS405CB,RS_serial);
     XMInput_init(link_q);
-    usleep(INITTIME);
+    usleep(INITTIME*5);
     link_q[4][0]=0.0;
     link_q[11][0]=0.0;
     link_q[1][0]=0*(M_PI/1800);
     link_q[7][0]=0*(M_PI/1800);
-    link_q[2][0]=-10*(M_PI/180);//右股ロール
+    link_q[2][0]=0*(M_PI/180);//右股ロール
     link_q[3][0]=0*(M_PI/180);//右股ピッチ
     link_q[5][0]=0*(M_PI/180);//右足首ピッチ
-    link_q[6][0]=-10*(M_PI/180);//右足首ロール
-    link_q[9][0]=-10*(M_PI/180);//左股ロール
-    link_q[10][0]=0*(M_PI/180);//左股ピッチ
-    link_q[12][0]=0*(M_PI/180);//右足首ピッチ
-    link_q[13][0]=-10*(M_PI/180);//右足首ロール
+    link_q[6][0]=0*(M_PI/180);//右足首ロール
+    link_q[9][0]=0*(M_PI/180);//左股ロール
+    link_q[10][0]=0.0*(M_PI/180);//左股ピッチ
+    link_q[12][0]=0*(M_PI/180);//左足首ピッチ
+    link_q[13][0]=0*(M_PI/180);//左足首ロール
     ECmotorInput(link_q,Arduino,Arduino2,0);
-    //RSInput_init(link_q,RS405CB,RS_serial);
     XMInput_init(link_q);
-    usleep(INITTIME );
+    usleep(INITTIME*30);
 #else
        //////////////////////////////////
-   // LINK[0].p={0.0,(WY+DWY)/2,ZC};//{0.0,0.02,0.385};
     LINK[0].R<< 1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0;
 
     linkref[0].p={0.0,DWR,0.0};//右足{0.0,0.0,0.0}
@@ -225,24 +207,56 @@ int main()
     linkref[1].p={0.0,WY+DWY+DWL,0.0};//右足{0.0,0.196,0.0}
     linkref[1].R<< 1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0;
 
+    LINK[0].p={0.0,(WY+DWY)/2,0.3}; 
+    kine.InverseKinematics(LINK,linkref[0].p,linkref[0].R,tofrom,LINK[1].ID);//右脚
+    kine.InverseKinematics(LINK,linkref[1].p,linkref[1].R,tofrom,LINK[8].ID);//左脚
+    kine.CalcCoG(LINK,robot);
+    double z0=robot.CoG(2);
+
     robot.CoGref={0.0,(WY+DWY)/2,ZC-DZC};
     LINK[0].p=robot.CoGref;
     kine.ModiCoG(LINK,robot,linkref,tofrom);
+    double z_init=robot.CoG(2);
 
- //   kine.InverseKinematics(LINK,linkref[0].p,linkref[0].R,tofrom,LINK[1].ID);
- //   kine.InverseKinematics(LINK,linkref[1].p,linkref[1].R,tofrom,LINK[8].ID);
-    
-    for(int j=0;j<15;j++)
+    for(int i=0;i<80;i++)//2s 80
     {
-        link_q[j][w_count]=LINK[j].q;
-    } 
-    w_count=0;//初期姿勢
-    cout<<"直立姿勢"<<endl;  
-    //RSInput_init(link_q,RS405CB,RS_serial);
-    ECmotorInput(link_q,Arduino,Arduino2,w_count);
-    XMInput_init(link_q);
+        robot.CoGref={0.0,(WY+DWY)/2,((z_init-z0)/2.0)*gene.t+z0};
+        LINK[0].p=robot.CoGref;
+        kine.ModiCoG(LINK,robot,linkref,tofrom);
+
+        gene.t=gene.t+0.01*DTNUM;
+        for(int j=0;j<15;j++)
+        {
+            link_q[j][i]=LINK[j].q;
+        }
+    }
+    gene.t=0.0;
+    cout<<"初期姿勢へ以降"<<endl;  
+    for(int i=0;i<80;i++)
+    {   
+        ECmotorInput(link_q,Arduino,Arduino2,w_count);
+        XMInput(link_q,w_count);
+        
+        w_count++;    
+        usleep( 25000 );//10000000　
+    }  
+    w_count=0;//初期姿勢 
     usleep( INITTIME );
-    //////////////////////////////////
+ 
+    // robot.CoGref={0.0,(WY+DWY)/2,ZC-DZC};
+    // LINK[0].p=robot.CoGref;
+    // kine.ModiCoG(LINK,robot,linkref,tofrom);
+   
+    // for(int j=0;j<15;j++)
+    // {
+    //     link_q[j][w_count]=LINK[j].q;
+    // } 
+    // w_count=0;//初期姿勢
+    // cout<<"直立姿勢"<<endl;  
+    // ECmotorInput(link_q,Arduino,Arduino2,w_count);
+    // XMInput_init(link_q);
+    // usleep( INITTIME );
+    // //////////////////////////////////
       
     #ifndef MOVE_TEST
 
@@ -296,7 +310,6 @@ int main()
         cout<<"動作テスト開始"<<endl;  
         for(int i=0;i<160;i++)
         {   
-            //RSInput(link_q,RS405CB,RS_serial,w_count);
             ECmotorInput(link_q,Arduino,Arduino2,w_count);
             XMInput(link_q,w_count);
             
@@ -308,10 +321,7 @@ int main()
 
     for(int i=0;i<80;i++)//2s 80
     {
-      //  LINK[0].p={0.0,((START-((WY+DWY)/2))/2.0)*gene.t+((WY+DWY)/2),ZC};//{0.0,0.02,0.385};
         LINK[0].R<< 1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0;
-      //  kine.InverseKinematics(LINK,linkref[0].p,linkref[0].R,tofrom,LINK[1].ID);
-      //  kine.InverseKinematics(LINK,linkref[1].p,linkref[1].R,tofrom,LINK[8].ID);
         robot.CoGref={0.0,((START-((WY+DWY)/2))/2.0)*gene.t+((WY+DWY)/2),ZC-DZC};
         LINK[0].p=robot.CoGref;
         kine.ModiCoG(LINK,robot,linkref,tofrom);
@@ -327,7 +337,6 @@ int main()
     cout<<"初期姿勢へ以降"<<endl;  
     for(int i=0;i<80;i++)
     {   
-        //RSInput(link_q,RS405CB,RS_serial,w_count);
         ECmotorInput(link_q,Arduino,Arduino2,w_count);
         XMInput(link_q,w_count);
         
@@ -340,13 +349,10 @@ int main()
     for(int i=0;i<NR_TIMER_INTERRUPTS;i++)
     {
         #ifndef ONE_LEG
-        if(i<=50)//50 90
+        if(i<=63)//53 95
         {
             gene.PatternGenerator(LINK,robot,linkref,wp,linkref[0].p,linkref[1].p,numsteps);
             kine.ModiCoG(LINK,robot,linkref,tofrom);
-          //  kine.InverseKinematics(LINK,linkref[0].p,linkref[0].R,tofrom,LINK[1].ID);
-          //  kine.InverseKinematics(LINK,linkref[1].p,linkref[1].R,tofrom,LINK[8].ID);
-
         }
         #else
         gene.PatternGenerator(LINK,robot,linkref,wp,linkref[0].p,linkref[1].p,numsteps);
@@ -374,18 +380,6 @@ int main()
         p_body_old=LINK[0].p;
         dp_body_old=LINK[0].v;
         ddp_body_old=LINK[0].acc;
-        //
-        //kine.InverseKinematics(LINK,linkref[0].p,linkref[0].R,tofrom,LINK[1].ID);
-        //kine.InverseKinematics(LINK,linkref[1].p,linkref[1].R,tofrom,LINK[8].ID);
-        
-        ////
-        /*
-        for(int i=0; i<LINKNUM; i++)//
-        {
-            LINK[i].get_q=LINK[i].q;
-        }
-        State_estimate();*/
-        /////
         
         #endif //ONE_LEG
 
@@ -400,7 +394,6 @@ int main()
 
     w_count=0;//初期姿勢
     cout<<"0歩目_遊脚移動"<<endl;  
-    //RSInput_init(link_q,RS405CB,RS_serial);
     ECmotorInput(link_q,Arduino,Arduino2,w_count);
     XMInput_init(link_q);
     usleep( INITTIME );
@@ -422,17 +415,10 @@ int main()
 
 #endif //TEST
 
-    // for(int i=0;i<RSNUM;i++)
-    // {
-    //     RS405CB[i].tq_mode=0;
-    //     RS_serial.rs_torque(RS405CB[i]);
-    //     cout<<"torque off"<<endl;
-    // }
     XM_serial.torque_enables(false);
     XM_serial.set_LEDs(false);
-
     XM_serial.close();
-    //RS_serial.rs_close();
+
     Arduino_s.s_close();
     Arduino2.s_close();
     Arduino.s_close();
@@ -465,103 +451,93 @@ void LinkInit(RobotLink LINK[], int linknum)
 
     LINK[0].a = {0.0, 0.0, 0.0};  //ルートリンク
     LINK[0].b = {0.0, 0.0, 0.0};
-    LINK[0].c_ ={0.0085, 0.001, 0.0987};//{0.00775, 0.0, 0.062};//{0.0085, 0.001, 0.0945};//
-    LINK[0].m=0.575;//;//0.318;//0.575;//
+    LINK[0].c_ ={-0.003, 0.001, 0.0925};//{-0.003, 0.001, 0.098};//
+    LINK[0].m=0.8;//0.637;//0.676;//
 
 /**/
     //右足
     LINK[1].parentID = 0;//右足ヨー
     LINK[1].a = {0.0, 0.0, 1.0};
-    //LINK[1].b = {0.00, -0.03, 0.07};//重心の前後方向の位置を調節するならここ 0.085
-    LINK[1].b = {0.00, -0.03, 0.0};//重心の前後方向の位置を調節するならここ 0.085
-
+    LINK[1].b ={0.00,-0.035, 0.00};// {0.00, -0.03, 0.0};//重心の前後方向の位置を調節するならここ 0.085
     LINK[1].c_ ={0.0, 0.0, 0.0};
     LINK[1].m=0.0;
 
     LINK[2].parentID = 1;//右足ロール
     LINK[2].a = {1.0, 0.0, 0.0};
-    LINK[2].b = {0.00775, 0.0, 0.0};
-    LINK[2].c_ ={-0.017, 0.0, -0.012};
-    LINK[2].m=0.201;
+    LINK[2].b = {0.0, 0.0, 0.0};//{0.00775, 0.0, 0.0};
+    LINK[2].c_ ={0.0215, -0.002, -0.008};//{-0.017, 0.0, -0.012};
+    LINK[2].m=0.171;//0.201;
 
     LINK[3].parentID = 2;//右足ピッチ
     LINK[3].a = {0.0, 1.0, 0.0};
     LINK[3].b = {0.0, 0.0, 0.0};
-    LINK[3].c_ ={-0.023, -0.061, -0.032};
-    LINK[3].m=0.311;
-
+    LINK[3].c_ ={-0.052, -0.052, -0.025};//{-0.023, -0.061, -0.032};
+    LINK[3].m=0.502;//0.311;
 
     LINK[4].parentID = 3;//右足直動
     LINK[4].a = {0.0, 0.0, 1.0};
     LINK[4].b = {0.0, 0.0, 0.0};
-    LINK[4].c_ ={0.0065, -0.0445, -0.0927};
-    LINK[4].m=0.267;
-
+    LINK[4].c_ ={-0.033, -0.042, -0.1655};//{0.0065, -0.0445, -0.0927};
+    LINK[4].m=0.461;//0.267;
 
     LINK[5].parentID = 4;//右足ピッチ
     LINK[5].a = {0.0, 1.0, 0.0};
     LINK[5].b = {0.0, 0.0, -0.3}; //-0.367//足リンクなし-0.382　重心高さ0.4m -0.327 重心高さ0.45m -0.367
-    LINK[5].c_ ={-0.017, 0.0, 0.012};
-    LINK[5].m=0.201;
-
+    LINK[5].c_ ={0.0215, -0.002, 0.008};//{-0.017, 0.0, 0.012};
+    LINK[5].m=0.171;
 
     LINK[6].parentID = 5;//右足ロール
     LINK[6].a = {1.0, 0.0, 0.0};
     LINK[6].b = {0.0, 0.0, 0.0};
-    LINK[6].c_ ={0.0, -0.011, -0.0225};
-    LINK[6].m=0.069;
-
+    LINK[6].c_ ={0.00, -0.025, -0.027};//{-0.0015, -0.014, -0.026};
+    LINK[6].m=0.1;//0.087;
 
     LINK[7].parentID = 6;//右足先 仮想の回転関節だとする
     LINK[7].a = {0.0, 0.0, 0.0};
-    LINK[7].b = {0.0, 0.0, -0.0265};
+    LINK[7].b = {0.0, 0.0, -0.0325};
     LINK[7].c_ ={0.0, 0.0, 0.0};
     LINK[7].m=0.0;
-
 
     //左足
     LINK[8].parentID = 0;
     LINK[8].a = {0.0, 0.0, 1.0};
-//    LINK[8].b = {0.00, 0.03, 0.07};
-    LINK[8].b = {0.00, 0.03, 0.0};
+    LINK[8].b = {0.00,0.035, 0.00};
     LINK[8].c_ ={0.0, 0.0, 0.0};
     LINK[8].m=0.0;
 
-
     LINK[9].parentID = 8;
     LINK[9].a = {1.0, 0.0, 0.0};
-    LINK[9].b = {0.00775, 0.0, 0.0};
-    LINK[9].c_ ={-0.017, 0.0, -0.012};
-    LINK[9].m=0.201;
-
+    LINK[9].b = {0.0, 0.0, 0.0};
+    LINK[9].c_ ={0.0215, 0.002, -0.008};//{-0.017, 0.0, -0.012};
+    LINK[9].m=0.171;//0.201;
 
     LINK[10].parentID = 9;
     LINK[10].a = {0.0, 1.0, 0.0};
     LINK[10].b = {0.0, 0.0, 0.0};
-    LINK[10].c_ ={-0.023, 0.061, -0.032};
-    LINK[10].m=0.311;
+    LINK[10].c_ ={-0.052, 0.052, -0.025};///{-0.023, 0.061, -0.032};
+    LINK[10].m=0.502;//0.311;
 
     LINK[11].parentID = 10;
     LINK[11].a = {0.0, 0.0, 1.0};
     LINK[11].b = {0.0, 0.0, 0.0};
-    LINK[11].c_ ={0.0065, 0.0445, -0.0927};
-    LINK[11].m=0.267;
+    LINK[11].c_ ={-0.033, 0.042, -0.1655};//{0.0065, 0.0445, -0.0927};
+    LINK[11].m=0.461;//0.267;
 
     LINK[12].parentID = 11;
     LINK[12].a = {0.0, 1.0, 0.0};
     LINK[12].b = {0.0, 0.0, -0.3};
-    LINK[12].c_ ={-0.017, 0.0, 0.012};
-    LINK[12].m=0.201;
+    LINK[12].c_ ={0.0215, 0.002, 0.008};//{-0.017, 0.0, 0.012};
+    LINK[12].m=0.171;//0.201;
 
     LINK[13].parentID = 12;
     LINK[13].a = {1.0, 0.0, 0.0};
     LINK[13].b = {0.0, 0.0, 0.0};
-    LINK[13].c_ ={0.0, 0.011, -0.0225};
-    LINK[13].m=0.069;
+    LINK[13].c_ = {0.00, 0.025, -0.027};//{-0.0015, 0.014, -0.026};//{0.0, 0.011, -0.0225};
+    LINK[13].m=0.1;//0.087;//0.069;
 
     LINK[14].parentID = 13;//仮想の回転関節
     LINK[14].a = {0.0, 0.0, 0.0};
-    LINK[14].b = {0.0, 0.0, -0.0265};
+    LINK[14].b = {0.0, 0.0, -0.0325};
     LINK[14].c_ ={0.0, 0.0, 0.0};
     LINK[14].m=0.0;
 
@@ -579,42 +555,42 @@ void WPInit(walkingparameters wp[])
     wp[0].Tdbl=TDBL;//両足支持期 0歩目は両足支持期は無し
 
     wp[1].S={0.0,WY};//歩行パラメータ
-    wp[1].Sz=0.0;//足上げ高さ
+    wp[1].Sz=0.0;//F_h;//足上げ高さ
     wp[1].Tsup=TSUP;//歩行周期
     wp[1].Tdbl=TDBL;//両足支持期
 
     wp[2].S={0.0,WY};//歩行パラメータ
-    wp[2].Sz=0.0;//0.008;//足上げ高さ
+    wp[2].Sz=F_h;//足上げ高さ
     wp[2].Tsup=TSUP;//歩行周期
     wp[2].Tdbl=TDBL;//両足支持期
 
     wp[3].S={WX/4,WY};//歩行パラメータ
-    wp[3].Sz=0.0;//0.008;//足上げ高さ
+    wp[3].Sz=F_h;//足上げ高さ
     wp[3].Tsup=TSUP;//歩行周期
     wp[3].Tdbl=TDBL;//両足支持期
 
     wp[4].S={WX/2,WY};//歩行パラメータ
-    wp[4].Sz=0.0;//0.008;//足上げ高さ
+    wp[4].Sz=F_h;//足上げ高さ
     wp[4].Tsup=TSUP;//歩行周期
     wp[4].Tdbl=TDBL;//両足支持期
 
     wp[5].S={WX,WY};//歩行パラメータ
-    wp[5].Sz=0.0;//0.008;//足上げ高さ
+    wp[5].Sz=F_h;//足上げ高さ
     wp[5].Tsup=TSUP;//歩行周期
     wp[5].Tdbl=TDBL;//両足支持期
 
     wp[6].S={WX,WY};//歩行パラメータ
-    wp[6].Sz=0.0;//0.008;//足上げ高さ
+    wp[6].Sz=F_h;//足上げ高さ
     wp[6].Tsup=TSUP;//歩行周期
     wp[6].Tdbl=TDBL;//両足支持期
 
     wp[7].S={WX/2,WY};//歩行パラメータ
-    wp[7].Sz=0.0;//0.008;//足上げ高さ
+    wp[7].Sz=F_h;//足上げ高さ
     wp[7].Tsup=TSUP;//歩行周期
     wp[7].Tdbl=TDBL;//両足支持期
 
     wp[8].S={0.0,WY};//歩行パラメータ
-    wp[8].Sz=0.0;//0.008;//足上げ高さ
+    wp[8].Sz=F_h;//足上げ高さ
     wp[8].Tsup=TSUP;//歩行周期
     wp[8].Tdbl=TDBL;//両足支持期
 
@@ -666,39 +642,6 @@ void WPInit(walkingparameters wp[])
 }
 
 //actuate
-void RSInit(Servo_data RS405CB[])
-{
-    RS405CB[0].ID=1;//右足ヨー
-    RS405CB[1].ID=6;//左足ヨー
-}
-
-void RSInput_init(double (&link_q)[15][NR_TIMER_INTERRUPTS],Servo_data RS405CB[],Servo_serial& RS_serial)
-{
-    cout<<"RSInput_init"<<endl;
-
-    RS405CB[0].Angle_ref=-50+link_q[1][0]*(1800/M_PI); 
-    RS405CB[1].Angle_ref=link_q[7][0]*(1800/M_PI); 
-    //送信
-    for(int i=0;i<RSNUM;i++)
-    {
-        RS405CB[i].dt_ref=100;//1s
-        RS_serial.rs_move(RS405CB[i]);
-    }
-    
-}
-
-void RSInput(double (&link_q)[15][NR_TIMER_INTERRUPTS],Servo_data RS405CB[],Servo_serial& RS_serial,int w_count)
-{
-    RS405CB[0].Angle_ref=-50+link_q[1][w_count]*(1800/M_PI); 
-    RS405CB[1].Angle_ref=link_q[7][w_count]*(1800/M_PI); 
-    //送信
-    for(int i=0;i<RSNUM;i++)
-    {
-        RS405CB[i].dt_ref=1*DTNUM;//*1.5;//*2;//10ms
-        RS_serial.rs_move(RS405CB[i]);
-    }
-}
-
 
 void ECmotorInput(double (&link_q)[15][NR_TIMER_INTERRUPTS],serial& Arduino,serial& Arduino2,int w_count)
 {
@@ -730,14 +673,14 @@ void XMInput_init(double (&link_q)[15][NR_TIMER_INTERRUPTS])
 {
     cout<<"XMInput_init"<<endl;
 
-   XM_serial.angle[0]=-1*link_q[2][0]*(180/M_PI);//右股ロール
+   XM_serial.angle[0]=-0.35+link_q[2][0]*(180/M_PI);//右股ロール
    XM_serial.angle[1]=-1*link_q[3][0]*(180/M_PI);//右股ピッチ
-   XM_serial.angle[2]=-2.0+link_q[5][0]*(180/M_PI);//右足首ピッチ
-   XM_serial.angle[3]=link_q[6][0]*(180/M_PI);//右足首ロール
-   XM_serial.angle[4]=-1.5+-1*link_q[9][0]*(180/M_PI);//左股ロール
+   XM_serial.angle[2]=link_q[5][0]*(180/M_PI);//右足首ピッチ
+   XM_serial.angle[3]=-1*(-0.5+link_q[6][0]*(180/M_PI));//右足首ロール
+   XM_serial.angle[4]=-1.23+link_q[9][0]*(180/M_PI);//左股ロール
    XM_serial.angle[5]=link_q[10][0]*(180/M_PI);//左股ピッチ
-   XM_serial.angle[6]=-1*link_q[12][0]*(180/M_PI);//右足首ピッチ
-   XM_serial.angle[7]=link_q[13][0]*(180/M_PI);//右足首ロール
+   XM_serial.angle[6]=-1*(2.0+link_q[12][0]*(180/M_PI));//左足首ピッチ
+   XM_serial.angle[7]=-1*(0.5+link_q[13][0]*(180/M_PI));//左足首ロール
 
    XM_serial.dt=1.0;//1s
    XM_serial.angle_time_writes2();
@@ -745,14 +688,14 @@ void XMInput_init(double (&link_q)[15][NR_TIMER_INTERRUPTS])
 
 void XMInput(double (&link_q)[15][NR_TIMER_INTERRUPTS],int w_count)
 {
-   XM_serial.angle[0]=-1*link_q[2][w_count]*(180/M_PI);//右股ロール
+   XM_serial.angle[0]=-0.35+link_q[2][w_count]*(180/M_PI);//右股ロール
    XM_serial.angle[1]=-1*link_q[3][w_count]*(180/M_PI);//右股ピッチ
-   XM_serial.angle[2]=-2.0+link_q[5][w_count]*(180/M_PI);//右足首ピッチ
-   XM_serial.angle[3]=link_q[6][w_count]*(180/M_PI);//右足首ロール
-   XM_serial.angle[4]=-1.5+-1*link_q[9][w_count]*(180/M_PI);//左股ロール
+   XM_serial.angle[2]=link_q[5][w_count]*(180/M_PI);//右足首ピッチ
+   XM_serial.angle[3]=-1*(-0.5+link_q[6][w_count]*(180/M_PI));//右足首ロール
+   XM_serial.angle[4]=-1.23+link_q[9][w_count]*(180/M_PI);//左股ロール
    XM_serial.angle[5]=link_q[10][w_count]*(180/M_PI);//左股ピッチ
-   XM_serial.angle[6]=-1*link_q[12][w_count]*(180/M_PI);//右足首ピッチ
-   XM_serial.angle[7]=link_q[13][w_count]*(180/M_PI);//右足首ロール
+   XM_serial.angle[6]=-1*(2.0+link_q[12][w_count]*(180/M_PI));//左足首ピッチ
+   XM_serial.angle[7]=-1*(0.5+link_q[13][w_count]*(180/M_PI));//左足首ロール
 
    XM_serial.dt=0.01*DTNUM;//*1.5;//*2;//10ms
    
@@ -769,16 +712,16 @@ void Data_sense(int w_count)
    //IMU、直動部エンコーダの値取得
    Arduino_s.s_read(arduino_sense_data);
 
-   link_get_q[2][w_count]=-1*XM_serial.angle_g[0]*(M_PI/180);//右股ロール
+   link_get_q[2][w_count]=(0.35+XM_serial.angle_g[0])*(M_PI/180);//右股ロール
    link_get_q[3][w_count]=-1*XM_serial.angle_g[1]*(M_PI/180);//右股ピッチ
    link_get_q[4][w_count]=-1*(arduino_sense_data[1]/PPR)*2*M_PI*PINION_RADIUS;//右足直動
-   link_get_q[5][w_count]=(2.0+XM_serial.angle_g[2])*(M_PI/180);//右足首ピッチ
-   link_get_q[6][w_count]=XM_serial.angle_g[3]*(M_PI/180);//右足首ロール
-   link_get_q[9][w_count]=(-1.5-1*XM_serial.angle_g[4])*(M_PI/180);//左股ロール
+   link_get_q[5][w_count]=XM_serial.angle_g[2]*(M_PI/180);//右足首ピッチ
+   link_get_q[6][w_count]=-1*(-0.5+XM_serial.angle_g[3])*(M_PI/180);//右足首ロール
+   link_get_q[9][w_count]=(1.23+XM_serial.angle_g[4])*(M_PI/180);//左股ロール
    link_get_q[10][w_count]=XM_serial.angle_g[5]*(M_PI/180);//左股ピッチ
    link_get_q[11][w_count]=(arduino_sense_data[2]/PPR)*2*M_PI*PINION_RADIUS;//左足直動-
-   link_get_q[12][w_count]=-1*XM_serial.angle_g[6]*(M_PI/180);//右足首ピッチ
-   link_get_q[13][w_count]=XM_serial.angle_g[7]*(M_PI/180);//右足首ロール
+   link_get_q[12][w_count]=-1*(2.0+XM_serial.angle_g[6])*(M_PI/180);//右足首ピッチ
+   link_get_q[13][w_count]=-1*(0.5+XM_serial.angle_g[7])*(M_PI/180);//右足首ロール
    //
    link_get_c[2][w_count]=XM_serial.current_g[0];//右股ロール
    link_get_c[3][w_count]=XM_serial.current_g[1];//右股ピッチ
@@ -894,7 +837,6 @@ void timer_handler(int signam)
     cout<<dt<<"ms"<<endl;
     oldt=t;
     
-    //RSInput(link_q,RS405CB,RS_serial,w_count);
     ECmotorInput(link_q,Arduino,Arduino2,w_count);
     XMInput(link_q,w_count);
     Data_sense(w_count);

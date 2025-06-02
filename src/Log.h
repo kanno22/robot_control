@@ -10,7 +10,7 @@
 #define FILE_NAME_S "./log/log_sensor.csv"
 #define FILE_NAME_C "./log/log_cog.csv"
 
-#define DATANUM 360
+#define DATANUM 396//360
 
 
 using namespace std;
