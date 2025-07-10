@@ -57,18 +57,15 @@ void DataLog::logging_cog(RobotLink link[],Robot robot,double t)
     mylog_cog<<t<<"\t"<<robot.CoG_O_GND[1](0)<<"\t"<<robot.CoG_O_GND[1](1)<<"\t"<<robot.CoG_O_GND[1](2)<<"\t"<<robot.CoG_gnd(0)<<"\t"<<robot.CoG_gnd(1)<<"\t"<<robot.CoG_gnd(2)<<"\t"<<robot.p_O_GND(0)<<"\t"<<robot.p_O_GND(1)<<"\t"<<robot.p_O_GND(2)<<"\t"<<robot.p_body_GND[1](0)<<"\t"<<robot.p_body_GND[1](1)<<"\t"<<robot.p_body_GND[1](2)<<"\t"<<robot.dp_body_GND[1](0)<<"\t"<<robot.dp_body_GND[1](1)<<"\t"<<robot.dp_body_GND[1](2)<<"\t"<<robot.ddp_body_GND(0)<<"\t"<<robot.ddp_body_GND(1)<<"\t"<<robot.ddp_body_GND(2)<<"\t"<<robot.dCoG_O_GND[1](0)<<"\t"<<robot.dCoG_O_GND[1](1)<<"\t"<<robot.dCoG_O_GND[1](2)<<"\t"<<robot.ddCoG_O_GND(0)<<"\t"<<robot.ddCoG_O_GND(1)<<"\t"<<robot.ddCoG_O_GND(2)<<"\t"<<robot.dCoG_O_GND[0](0)<<"\t"<<robot.dCoG_O_GND[0](1)<<"\t"<<robot.dCoG_O_GND[0](2)<<"\t"<<endl;
 }
 
-//  void DataLog::log3_init()1
-//  {
-//     mylog3.open(FILE_NAME_3,std::ios::trunc);//上書きモード
+ void DataLog::log_imu_init()
+ {
+    mylog_imu.open(FILE_NAME_I,std::ios::trunc);//上書きモード
+   mylog_imu<<"Time\t"<<"IMU_ddx\t"<<"IMU_ddy\t"<<"IMU_ddz\t"<<"IMU_yaw\t"<<"IMU_roll\t"<<"IMU_pitch\t"<<endl;
 
-//    // mylog2<<"time\t"<<"Rleg_l\t"<<"Lleg_l\t"<<endl;
-//    mylog3<<"L_C_roll\t"<<"L_A_roll\t"<<"L_Linear\t"<<"L_C_roll_c\t"<<"L_A_roll_c\t"<<endl;
+ }
 
-//  }
+ void DataLog::logging_imu(double (&IMU_acc)[3][DATANUM],double (&IMU_angle)[3][DATANUM],double (&IMU_time)[DATANUM],int w_count)
+{
+    mylog_imu<<IMU_time[w_count]<<"\t"<<IMU_acc[0][w_count]<<"\t"<<IMU_acc[1][w_count]<<"\t"<<IMU_acc[2][w_count]<<"\t"<<IMU_angle[0][w_count]<<"\t"<<IMU_angle[1][w_count]<<"\t"<<IMU_angle[2][w_count]<<"\t"<<endl;
 
-//  void DataLog::logging_3(RobotLink link[])
-// {
-//    // mylog2<<gene.t<<"\t"<<link[4].q<<"\t"<<link[11].q<<endl;
-//     mylog3<<link[9].get_q<<"\t"<<link[13].get_q<<"\t"<<link[11].get_q<<"\t"<<link[9].get_c<<"\t"<<link[13].get_c<<"\t"<<endl;
-
-// }
+}

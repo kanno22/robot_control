@@ -6,6 +6,7 @@ file="./log/log.csv"
 file2="./log/log2.csv"
 file3="./log/log_sensor.csv"
 file4="./log/log_cog.csv"
+file5="./log/log_imu.csv"
 
 set output "./fig/test.png"
 set autoscale x
@@ -356,6 +357,22 @@ set xlabel "count []"
 set ylabel "Acceleration [m/s^2]"
 
 plot file using 25 title "COG az ref" w l lw 2,file4 using 25 title "COG az" w l lw 2
+
+set output "./fig/IMU_acc.png"
+set autoscale x
+set autoscale y
+set xlabel "count []"
+set ylabel "Acceleration [m/s^2]"
+
+plot file5 using 2 title "ddx" w l lw 2,file5 using 3 title "ddy" w l lw 2,file5 using 4 title "ddz" w l lw 2
+
+set output "./fig/IMU_angle.png"
+set autoscale x
+set autoscale y
+set xlabel "count []"
+set ylabel "Angle [rad]"
+
+plot file5 using 5 title "yaw" w l lw 2,file5 using 6 title "roll" w l lw 2,file5 using 7 title "pitch" w l lw 2
 
 
 #重心加速度x,y,z、ボディ加速度のx,y,z

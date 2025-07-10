@@ -30,7 +30,7 @@ struct itimerval timer, old_timer;
 #define START 0.00089//0.00081//0.00079//
 #define WX 0.0//0.015//0.033
 #define WY 0.02
-#define F_h 0.01//0.008
+#define F_h 0.0//0.01//0.008
 #define DWY 0.056//0.058//0.045//0.0465//両足支持期の増分
 #define TSUP 0.5
 #define TDBL 0.6//0.3
@@ -73,10 +73,15 @@ double calcTime();//時間計測
     double link_q[15][NR_TIMER_INTERRUPTS];//目標関節変位を格納する配列
     double link_get_q[15][NR_TIMER_INTERRUPTS];//取得した関節変位を格納する配列
     double link_get_c[15][NR_TIMER_INTERRUPTS];//取得した電流を格納する配列
-    string linear_get_q[NR_TIMER_INTERRUPTS];
-    string ddx[NR_TIMER_INTERRUPTS];//取得した生の加速度を格納する配列
-    string ddy[NR_TIMER_INTERRUPTS];//取得した生の加速度を格納する配列
-    string ddz[NR_TIMER_INTERRUPTS];//取得した生の加速度を格納する配列
+
+    double IMU_acc[3][NR_TIMER_INTERRUPTS];//IMUからの加速度を格納する配列
+    double IMU_angle[3][NR_TIMER_INTERRUPTS];//IMUからの角度を格納する配列
+    double IMU_time[NR_TIMER_INTERRUPTS];//Arduinoからの時間を格納する配列
+
+    // string linear_get_q[NR_TIMER_INTERRUPTS];
+    // string ddx[NR_TIMER_INTERRUPTS];//取得した生の加速度を格納する配列
+    // string ddy[NR_TIMER_INTERRUPTS];//取得した生の加速度を格納する配列
+    // string ddz[NR_TIMER_INTERRUPTS];//取得した生の加速度を格納する配列
     vector<float> arduino_sense_data;//arduino nanoから送られてきたIMU、エンコーダの値を格納する配列
 
     Kinematics kine;
@@ -124,7 +129,7 @@ int main()
   // kine.InverseKinematics(LINK,linkref[0].p,linkref[0].R,tofrom,LINK[1].ID);
    // kine.InverseKinematics(LINK,linkref[1].p,linkref[1].R,tofrom,LINK[8].ID);
 
-    robot.CoGref={0.0,(WY+DWY)/2,0.25-0.0325};//ZC-DZC
+    robot.CoGref={0.0,(WY+DWY)/2,0.23};//ZC-DZC0.25-0.0325
     LINK[0].p=robot.CoGref;
     cout<<"CoGref="<<robot.CoGref<<endl;
 
@@ -153,6 +158,7 @@ int main()
     datalog.log_init();
     datalog.log2_init();
     datalog.log_sensor_init();
+    datalog.log_imu_init();
     datalog.log_cog_init();
     //////////////////////////////////
     
@@ -349,7 +355,7 @@ int main()
     for(int i=0;i<NR_TIMER_INTERRUPTS;i++)
     {
         #ifndef ONE_LEG
-        if(i<=63)//53 95
+        if(i<=57)//63 53 95
         {
             gene.PatternGenerator(LINK,robot,linkref,wp,linkref[0].p,linkref[1].p,numsteps);
             kine.ModiCoG(LINK,robot,linkref,tofrom);
@@ -432,6 +438,7 @@ int main()
        State_estimate();
        datalog.logging_cog(LINK,robot,state.t);
        datalog.logging_sensor(link_get_q,link_get_c,i);
+       datalog.logging_imu(IMU_acc,IMU_angle,IMU_time,i);
      }
     
    //////////////////////////////////
@@ -489,8 +496,8 @@ void LinkInit(RobotLink LINK[], int linknum)
     LINK[6].parentID = 5;//右足ロール
     LINK[6].a = {1.0, 0.0, 0.0};
     LINK[6].b = {0.0, 0.0, 0.0};
-    LINK[6].c_ ={0.00, -0.025, -0.027};//{-0.0015, -0.014, -0.026};
-    LINK[6].m=0.1;//0.087;
+    LINK[6].c_ ={-0.0015, -0.014, -0.026};//{0.00, -0.025, -0.027};
+    LINK[6].m=0.087;//0.1
 
     LINK[7].parentID = 6;//右足先 仮想の回転関節だとする
     LINK[7].a = {0.0, 0.0, 0.0};
@@ -532,8 +539,8 @@ void LinkInit(RobotLink LINK[], int linknum)
     LINK[13].parentID = 12;
     LINK[13].a = {1.0, 0.0, 0.0};
     LINK[13].b = {0.0, 0.0, 0.0};
-    LINK[13].c_ = {0.00, 0.025, -0.027};//{-0.0015, 0.014, -0.026};//{0.0, 0.011, -0.0225};
-    LINK[13].m=0.1;//0.087;//0.069;
+    LINK[13].c_ = {-0.0015, 0.014, -0.026};;//{0.00, 0.025, -0.027};//
+    LINK[13].m=0.087;//0.1;//
 
     LINK[14].parentID = 13;//仮想の回転関節
     LINK[14].a = {0.0, 0.0, 0.0};
@@ -676,11 +683,11 @@ void XMInput_init(double (&link_q)[15][NR_TIMER_INTERRUPTS])
    XM_serial.angle[0]=-0.35+link_q[2][0]*(180/M_PI);//右股ロール
    XM_serial.angle[1]=-1*link_q[3][0]*(180/M_PI);//右股ピッチ
    XM_serial.angle[2]=link_q[5][0]*(180/M_PI);//右足首ピッチ
-   XM_serial.angle[3]=-1*(-0.5+link_q[6][0]*(180/M_PI));//右足首ロール
-   XM_serial.angle[4]=-1.23+link_q[9][0]*(180/M_PI);//左股ロール
+   XM_serial.angle[3]=-1*(link_q[6][0]*(180/M_PI));//右足首ロール-0.5+
+   XM_serial.angle[4]=-0.6+link_q[9][0]*(180/M_PI);//左股ロール-1.23+
    XM_serial.angle[5]=link_q[10][0]*(180/M_PI);//左股ピッチ
    XM_serial.angle[6]=-1*(2.0+link_q[12][0]*(180/M_PI));//左足首ピッチ
-   XM_serial.angle[7]=-1*(0.5+link_q[13][0]*(180/M_PI));//左足首ロール
+   XM_serial.angle[7]=-1*(1.0+link_q[13][0]*(180/M_PI));//左足首ロール0.5
 
    XM_serial.dt=1.0;//1s
    XM_serial.angle_time_writes2();
@@ -691,11 +698,11 @@ void XMInput(double (&link_q)[15][NR_TIMER_INTERRUPTS],int w_count)
    XM_serial.angle[0]=-0.35+link_q[2][w_count]*(180/M_PI);//右股ロール
    XM_serial.angle[1]=-1*link_q[3][w_count]*(180/M_PI);//右股ピッチ
    XM_serial.angle[2]=link_q[5][w_count]*(180/M_PI);//右足首ピッチ
-   XM_serial.angle[3]=-1*(-0.5+link_q[6][w_count]*(180/M_PI));//右足首ロール
-   XM_serial.angle[4]=-1.23+link_q[9][w_count]*(180/M_PI);//左股ロール
+   XM_serial.angle[3]=-1*(link_q[6][w_count]*(180/M_PI));//右足首ロール
+   XM_serial.angle[4]=-0.6+link_q[9][w_count]*(180/M_PI);//左股ロール
    XM_serial.angle[5]=link_q[10][w_count]*(180/M_PI);//左股ピッチ
    XM_serial.angle[6]=-1*(2.0+link_q[12][w_count]*(180/M_PI));//左足首ピッチ
-   XM_serial.angle[7]=-1*(0.5+link_q[13][w_count]*(180/M_PI));//左足首ロール
+   XM_serial.angle[7]=-1*(1.0+link_q[13][w_count]*(180/M_PI));//左足首ロール
 
    XM_serial.dt=0.01*DTNUM;//*1.5;//*2;//10ms
    
@@ -716,12 +723,12 @@ void Data_sense(int w_count)
    link_get_q[3][w_count]=-1*XM_serial.angle_g[1]*(M_PI/180);//右股ピッチ
    link_get_q[4][w_count]=-1*(arduino_sense_data[1]/PPR)*2*M_PI*PINION_RADIUS;//右足直動
    link_get_q[5][w_count]=XM_serial.angle_g[2]*(M_PI/180);//右足首ピッチ
-   link_get_q[6][w_count]=-1*(-0.5+XM_serial.angle_g[3])*(M_PI/180);//右足首ロール
-   link_get_q[9][w_count]=(1.23+XM_serial.angle_g[4])*(M_PI/180);//左股ロール
+   link_get_q[6][w_count]=-1*(XM_serial.angle_g[3])*(M_PI/180);//右足首ロール-0.5+
+   link_get_q[9][w_count]=(0.6+XM_serial.angle_g[4])*(M_PI/180);//左股ロール1.23+
    link_get_q[10][w_count]=XM_serial.angle_g[5]*(M_PI/180);//左股ピッチ
    link_get_q[11][w_count]=(arduino_sense_data[2]/PPR)*2*M_PI*PINION_RADIUS;//左足直動-
    link_get_q[12][w_count]=-1*(2.0+XM_serial.angle_g[6])*(M_PI/180);//右足首ピッチ
-   link_get_q[13][w_count]=-1*(0.5+XM_serial.angle_g[7])*(M_PI/180);//右足首ロール
+   link_get_q[13][w_count]=-1*(1.0+XM_serial.angle_g[7])*(M_PI/180);//右足首ロール0.5+
    //
    link_get_c[2][w_count]=XM_serial.current_g[0];//右股ロール
    link_get_c[3][w_count]=XM_serial.current_g[1];//右股ピッチ
@@ -730,7 +737,17 @@ void Data_sense(int w_count)
    link_get_c[9][w_count]=XM_serial.current_g[4];//左股ロール
    link_get_c[10][w_count]=XM_serial.current_g[5];//左股ピッチ
    link_get_c[12][w_count]=XM_serial.current_g[6];//右足首ピッチ
-   link_get_c[13][w_count]=XM_serial.current_g[7];//右足首ロール
+   link_get_c[13][w_count]=XM_serial.current_g[7];//
+   
+    IMU_acc[0][w_count]=arduino_sense_data[3];//ddx
+    IMU_acc[1][w_count]=arduino_sense_data[4];//ddy
+    IMU_acc[2][w_count]=arduino_sense_data[5];//ddz
+
+    IMU_angle[0][w_count]=arduino_sense_data[6];//yaw
+    IMU_angle[1][w_count]=arduino_sense_data[7];//roll
+    IMU_angle[2][w_count]=arduino_sense_data[8];//pitch
+
+    IMU_time[w_count]=arduino_sense_data[0];//time
 }
 
 void Flag_send()
