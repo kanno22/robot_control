@@ -39,7 +39,7 @@ using namespace std;
         b=1;
 
         stepcount=0;//定常2
-        sup_dub=true;//
+        sup_single=true;//
     
         t=0.0;
         tcount=0;
@@ -51,7 +51,6 @@ using namespace std;
 
         Rx=0.0;
         Ry=0.0;
-        Rz=0.008;//0.01;//0.002;//0.04;//もう使ってない
         w=0.0;
     };
 
@@ -110,7 +109,7 @@ using namespace std;
             a1=wp[stepcount].Cvf;
             a2=wp[stepcount].Caf/2;
             a3=-(2*wp[stepcount].Caf+wp[stepcount+1].Cai)/(3*wp[stepcount].Tdbl);
-            a4=(wp[stepcount].Caf+wp[stepcount+1].Cai)/(4*wp[stepcount].Tdbl);
+            a4=(wp[stepcount].Caf+wp[stepcount+1].Cai)/(4*wp[stepcount].Tdbl*wp[stepcount].Tdbl);
         }
         else
         {
@@ -133,55 +132,54 @@ using namespace std;
     {
         //右足をn=0とする
 
-        if((stepcount==0)&&(tcount==0)&&(sup_dub==true))//n=1の着地位置を算出 定常歩行stepcount==2
+        if((stepcount==0)&&(tcount==0)&&(sup_single==true))//n=1の着地位置を算出 定常歩行stepcount==2
         {
             wp[stepcount].P(0)=Prefr(0);
             wp[stepcount].P(1)=Prefr(1)-DWR;
 
             //Step5~8
             PatternPlanner(wp);
-             cout<<"\n"<<stepcount<<"回目"<<endl;
-             cout<<"\n"<<sign(stepcount)<<endl;
+             cout<<"Step"<<stepcount+1<<endl;
 
             t+=dt;
             tcount++;
-            sup_dub=true;//片足支持
+            sup_single=true;//片足支持
 
         }
-        else if((tcount>=wp[stepcount].Tsup*(1/dt))&&(sup_dub==true))//両足支持に移行
+        else if((tcount>=wp[stepcount].Tsup*(1/dt))&&(sup_single==true))//両足支持に移行
         {
             if(wp[stepcount].Tdbl<=0.001)
             {
-                cout<<"両足支持期無し"<<t<<endl;
-                t=0.0;//リセット
-                tcount=0;
+                cout<<"No double-support period"<<t<<endl;
+                t=dt;//リセット
+                tcount=1;//
                 stepcount++;
                  //Step5~8
                 PatternPlanner(wp);
-                cout<<"\n"<<stepcount<<"回目"<<endl;
+                cout<<"Step"<<stepcount+1<<endl;
                 
             }
             else
             {
-                cout<<"両足支持期に移行"<<t<<endl;
-                t=0.0;//リセット
-                tcount=0;
-                sup_dub=false;//両足支持期に移行
+                cout<<"Shift to double-support period"<<t<<endl;
+                t=dt;//リセット
+                tcount=1;
+                sup_single=false;//両足支持期に移行
 
             }
             
         }
-        else if((tcount>=wp[stepcount].Tdbl*(1/dt))&&(sup_dub==false))//片足支持に移行 //n+1 //支持脚切り替えの瞬間だけ計算すればよい
+        else if((tcount>=wp[stepcount].Tdbl*(1/dt))&&(sup_single==false))//片足支持に移行 //n+1 //支持脚切り替えの瞬間だけ計算すればよい
         {
-            cout<<"片足支持期に移行"<<t<<endl;
-            t=0.0;//リセット
-            tcount=0;
+            cout<<"Shift to single-support period"<<t<<endl;
+            t=dt;//リセット
+            tcount=1;
             stepcount++;
-            sup_dub=true;//片足支持に移行
+            sup_single=true;//片足支持に移行
 
             //Step5~8
             PatternPlanner(wp);
-            cout<<"\n"<<stepcount<<"回目"<<endl;
+            cout<<"Step"<<stepcount+1<<endl;
         }
         else
         {
@@ -189,7 +187,7 @@ using namespace std;
             tcount++;
         }
 
-        if((sup_dub==true))//片足支持期
+        if((sup_single==true))//片足支持期
         {
             Cpref = (wp[stepcount].Cpi-wp[stepcount].P)*cosh(t/Tc)+Tc*wp[stepcount].Cvi*sinh(t/Tc)+wp[stepcount].P+(Csum-wp[stepcount].dCp);//n=0では修正着地位置=目標着地位置
             Cvref = ((wp[stepcount].Cpi-wp[stepcount].P)/Tc)*sinh(t/Tc)+wp[stepcount].Cvi*cosh(t/Tc);      
@@ -204,20 +202,19 @@ using namespace std;
 
                 if(stepcount==0)
                 {   
-                    // Rx=(wp[stepcount+1].P(0)-Prefl(0))/(2*M_PI);
-                    // Ry=(wp[stepcount+1].P(1)-Prefl(1))/(2*M_PI);
+                    Rx=((wp[stepcount+1].P(0)+wp[stepcount].dCp(0))-Prefl(0))/(2*M_PI);
+                    Ry=((wp[stepcount+1].P(1)+wp[stepcount].dCp(1))-Prefl(1))/(2*M_PI);
 
-                    // prefl(0)=Prefl(0)+Rx*(w*t-sin(w*t));//遊脚脚
-                    // prefl(1)=Prefl(1)+Ry*(w*t-sin(w*t));
-                    // prefl(2)=Rz*(1-cos(w*t));
-                    
+                    prefl(0)=Prefl(0)+Rx*(w*t-sin(w*t));//遊脚脚
+                    prefl(1)=Prefl(1)+Ry*(w*t-sin(w*t));
+                    prefl(2)=wp[stepcount].Sz*(1-cos(w*t));
                     prefr(0)=wp[stepcount].P(0);//支持脚
                     prefr(1)=wp[stepcount].P(1);
                     prefr(2)=0.0;
 
-                    prefl(0)=wp[stepcount+1].P(0)+wp[stepcount].dCp(0);//あらかじめ着地しておく
-                    prefl(1)=wp[stepcount+1].P(1)+wp[stepcount].dCp(1);
-                    prefl(2)=0.0;
+                    // prefl(0)=wp[stepcount+1].P(0)+wp[stepcount].dCp(0);//あらかじめ着地しておく
+                    // prefl(1)=wp[stepcount+1].P(1)+wp[stepcount].dCp(1);
+                    // prefl(2)=0.0;
 
                 }
                 else

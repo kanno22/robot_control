@@ -48,7 +48,7 @@ class walkingpatterngenerator
         double b;
 
         int stepcount;
-        bool sup_dub;//true:片足支持、false:両足支持
+        bool sup_single;//true:片足支持、false:両足支持
     
        // double t;
         int tcount;
@@ -58,7 +58,7 @@ class walkingpatterngenerator
         int Rstart;
         int Lstart;
 
-        double Rx, Ry, Rz;//サイクロイドの半径
+        double Rx, Ry;//サイクロイドの半径
         double w;//サイクロイド曲線の角速度(固有角振動数っていったほうがいいかな)
 
     public:

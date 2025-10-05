@@ -40,7 +40,7 @@ void Kinematics::InverseKinematics(RobotLink link[], Vector3d pref, Matrix3d Rre
     Matrix<double, 6, TOFROM> J;      //ヤコビ行列
     Matrix<double, TOFROM, 6> pinvJ;  //疑似逆行列
     Matrix<double, TOFROM, TOFROM> A;
-    double e = 1.0e-3;
+    double e = 0.5e-3;
     double k = 0.1;
 
     for (int i = 0; i < tofrom; i++)  //特異姿勢回避
@@ -214,7 +214,7 @@ void Kinematics::ModiCoG(RobotLink link[],Robot &robot,RobotLink linkref[], int 
 {
     Vector3d dC;
     Vector3d dw={0.0,0.0,0.0};
-    double e = 1.0e-3;
+    double e = 0.5e-3;
     double k = 1.0;
 
     //Step1 目標足先位置・姿勢をもらう

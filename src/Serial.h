@@ -15,7 +15,7 @@
 
 #define SERIAL_PORT "/dev/ttyACM0"
 #define SERIAL_PORT_2 "/dev/ttyACM1"
-#define SERIAL_PORT_S "/dev/ttyUSB1"
+#define SERIAL_PORT_S "/dev/ttyUSB1"//ここを変える
 
 
 using namespace std;
